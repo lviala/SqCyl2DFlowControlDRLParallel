@@ -1,181 +1,171 @@
-jet_positions[] = {1.57079632679, 4.71238898038};
 DefineConstant[
-length = {2.2, Name "Channel length"}
-front_distance = {0.2, Name "Cylinder center distance to inlet"}
-bottom_distance = {0.2, Name "Cylinder center distance from bottom"}
-jet_radius = {0.05, Name "Cylinder radius"}
-jet_width = {10*Pi/180, Name "Jet width in radians"}
-width = {0.41, Name "Channel width"}
-cylinder_size = {0.02, Name "Mesh size on cylinder"}
-box_size = {0.05, Name "Mesh size on wall"}
-coarse_size = {0.1, Name "Mesh size close to the outflow"}
-coarse_distance = {0.5, Name "Distance from the cylinder where coarsening starts"}
+jets_toggle = {1, Name "Toggle Jets --> 0 : No jets, 1: Yes jets"}
+height_cylinder = {1, Name "Cylinder Height (ND)"}
+ar = {1.0, Name "Cylinder Aspect Ratio"}
+cylinder_y_shift = {0.0, Name "Cylinder Center Shift from Centerline, Positive UP (ND)"}
+x_upstream = {10, Name "Domain Upstream Length (from left-most rect point) (ND)"}
+x_downstream = {26, Name "Domain Downstream Length (from right-most rect point) (ND)"}
+height_domain = {20, Name "Domain Height (ND)"}
+coarse_y_distance_top_bot = {4, Name "y-distance from center where mesh coarsening starts"}
+coarse_x_distance_left_from_LE = {2, Name "x-distance from upstream face where mesh coarsening starts"}
+mesh_size_cylinder = {0.05, Name "Mesh Size on Cylinder Walls"}
+mesh_size_medium = {0.2, Name "Medium mesh size (at boundary where coarsening starts"}
+mesh_size_coarse = {1, Name "Coarse mesh Size Close to Domain boundaries outside wake"}
+jet_width = {0.1, Name "Jet Width (ND)"}
 ];
 
-// Seed the cylinder
+// Seed the cylinder's center's identifier and create the center point
 center = newp;
-Point(center) = {0, 0, 0, cylinder_size};
+Point(center) = {0, 0, 0, mesh_size_cylinder};
 
-n = #jet_positions[];
+// Cylinder dimensions
+r_height = height_cylinder; // Cylinder height
+r_length = ar*height_cylinder; // Cylinder length
 
-radius = jet_radius;
 
-If(n > 0)
-  cylinder[] = {};
-  lower_bound[] = {};
-  uppper_bound[] = {};
+// Start definition of cylinder surfaces (curves). Note: it is defined in CCW sense
+// Each jet surface is a physical line, and the remaining of the rectangle is another
 
-  //  Define jet surfaces
-  For i In {0:(n-1)}
+// Define x,y coors of the rectangle sides
+y_top = r_height/2;
+y_bot = -r_height/2;
+x_left = -r_length/2;
+x_right = r_length/2;
 
-      angle = jet_positions[i];
-  
-      x = radius*Cos(angle-jet_width/2);
-      y = radius*Sin(angle-jet_width/2);
-      p = newp;
-      Point(p) = {x, y, 0, cylinder_size};
-      lower_bound[] += {p};
+// Define x coors of jets centres and upstream bound
+x_jet_centre = x_right-jet_width/2;
+x_jet_leftbound = x_right-jet_width;
 
-      x0 = radius*Cos(angle);
-      y0 = radius*Sin(angle);
-      arch_center = newp;
-      Point(arch_center) = {x0, y0, 0, cylinder_size};
+// Define all points of rectangle
+p = newp;
+Point(p) = {x_right, y_top, 0, mesh_size_cylinder};  // Top right corner (p)
+Point(p+1) = {x_jet_centre, y_top, 0, mesh_size_cylinder};  // Top jet centre (p+1)
+Point(p+2) = {x_jet_leftbound, y_top, 0, mesh_size_cylinder};  // Top jet upstream bound (p+2)
+Point(p+3) = {x_left, y_top, 0, mesh_size_cylinder};  // Top left corner (p+3)
+Point(p+4) = {x_left, y_bot, 0, mesh_size_cylinder};  // Bottom left corner (p+4)
+Point(p+5) = {x_jet_leftbound, y_bot, 0, mesh_size_cylinder};  // Bottom jet upstream bound (p+5)
+Point(p+6) = {x_jet_centre, y_bot, 0, mesh_size_cylinder};  // Bottom jet centre (p+6)
+Point(p+7) = {x_right, y_bot, 0, mesh_size_cylinder};  // Bottom right corner (p+7)
 
-      x = radius*Cos(angle+jet_width/2);
-      y = radius*Sin(angle+jet_width/2);
-      q = newp;
-      Point(q) = {x, y, 0, cylinder_size};
-      upper_bound[] += {q};
-  
-      // Draw the piece; p to angle
-      l = newl;
-      Circle(l) = {p, center, arch_center}; 
-      // Let each yet be marked as a different surface
-      Physical Line(5+i) = {l};
-      cylinder[] += {l};
+If(jets_toggle)
 
-      // Draw the piece; angle to q
-      l = newl;
-      Circle(l) = {arch_center, center, q}; 
-      // Let each yet be marked as a different surface
-      Physical Line(5+i) += {l};
-      cylinder[] += {l};
-  EndFor
+  cylinder[] = {}; // Create empty list of curves (surfaces) of the cylinder. Defined CCW
+  no_slip_cyl[] = {};  // No-slip cylinder physical surfaces list
 
-  // Fill in the rest of the cylinder. These are no slip surfaces
-  lower_bound[] += {lower_bound[0]};
-  Physical Line(4) = {};  // No slip cylinder surfaces
-  For i In {0:(n-1)}
-    p = upper_bound[i];
-    q = lower_bound[i+1];
+  // Define top jet surface:
+  l = newl;
+  Line(l) = {p, p+1};
+  Line(l+1) = {p+1, p+2};
+  Physical Line(5) = {l, l+1};  // Top jet physical surface
+  cylinder[] += {l, l+1}; // Add to cylinder list
 
-    pc[] = Point{p}; // Get coordinates
-    qc[] = Point{q}; // Get coordinates
+  // Define left no-slip surface of cylinder
+  l = newl;
+  Line(l) = {p+2, p+3};
+  Line(l+1) = {p+3, p+4};
+  Line(l+2) = {p+4, p+5};
+  no_slip_cyl[] += {l, l+1, l+2};
+  cylinder[] += {l, l+1, l+2};
 
-    // Compute the angle
-    angle_p = Atan2(pc[1], pc[0]);
-    angle_p = (angle_p > 0) ? angle_p : (2*Pi + angle_p);
+  // Define bottom jet surface:
+  l = newl;
+  Line(l) = {p+5, p+6};
+  Line(l+1) = {p+6, p+7};
+  Physical Line(6) = {l, l+1};  // Bottom jet physical surface
+  cylinder[] += {l, l+1}; // Add to cylinder list
 
-    angle_q = Atan2(qc[1], qc[0]);
-    angle_q = (angle_q > 0) ? angle_q : (2*Pi + angle_q);
+  // Define right no-slip surface
+  l = newl;
+  Line(l) = {p+7, p};
+  no_slip_cyl[] += {l};
+  cylinder[] += {l}; // Add to cylinder list
 
-    angle = angle_q - angle_p; // front back
-    angle = (angle < 0) ? angle + 2*Pi : angle; // check also back front
-    Printf("%g", angle);
-    // Greter than Pi, then we need to insert point
-    If(angle > Pi)
-      half[] = Rotate {{0, 0, 1}, {0, 0, 0}, angle/2} {Duplicata{Point{p};}};         
+  Physical Line(4) = {no_slip_cyl[]};  // Define no-slip cylinder physical surfaces
 
-      l = newl;
-      Circle(l) = {p, center, half}; 
-      // Let each yet be marked as a different surface
-      Physical Line(4) += {l};
-      cylinder[] += {l};
-
-      l = newl;
-      Circle(l) = {half, center, q}; 
-      // Let each yet be marked as a different surface
-      Physical Line(4) += {l};
-      cylinder[] += {l};                     
-    Else
-      l = newl;
-      Circle(l) = {p, center, q}; 
-      // Let each yet be marked as a different surface
-      Physical Line(4) += {l};
-      cylinder[] += {l};
-    EndIf
-  EndFor
-// Just the circle
+// Just the rectangle (if number no jets)
 Else
-   p = newp; 
-   Point(p) = {-jet_radius, 0, 0, cylinder_size};
-   Point(p+1) = {0, jet_radius, 0, cylinder_size};
-   Point(p+2) = {jet_radius, 0, 0, cylinder_size};
-   Point(p+3) = {0, -jet_radius, 0, cylinder_size};
-	
-   l = newl;
-   Circle(l) = {p, center, p+1};
-   Circle(l+1) = {p+1, center, p+2};
-   Circle(l+2) = {p+2, center, p+3};
-   Circle(l+3) = {p+3, center, p};
 
-   cylinder[] = {l, l+1, l+2, l+3};			
-   Physical Line(4) = {cylinder[]};
+   l = newl;
+   Line(l) = {p, p+3};
+   Line(l+1) = {p+3, p+4};
+   Line(l+2) = {p+4, p+7};
+   Line(l+3) = {p+7, p};
+
+   cylinder[] = {l, l+1, l+2, l+3};	// List of curves (surfaces) of the cylinder. Defined CCW
+   Physical Line(4) = {cylinder[]}; // Define no-slip cylinder physical surfaces (in this case all cyl)
 EndIf
 
-// The chanel
-p = newp;
+// Create the channel (Domain exterior boundary)
+// Define useful quantities
+y_top_dom = height_domain/2-cylinder_y_shift;  // Smaller than half the height if positive shift
+y_bot_dom = -height_domain/2-cylinder_y_shift; // Larger in mag than half the height if positive shift
+x_left_dom = -r_length/2-x_upstream;
+x_right_dom = r_length/2+x_downstream;
 
-Point(p) = {-front_distance, -bottom_distance, 0, box_size};
-Point(p+1) = {jet_radius+coarse_distance, -bottom_distance, 0, coarse_size};
-Point(p+2) = {-front_distance+length, -bottom_distance, 0, coarse_size};
-Point(p+5) = {-front_distance, -bottom_distance+width, 0, box_size};
-Point(p+4) = {jet_radius+coarse_distance, -bottom_distance+width, 0, coarse_size};
-Point(p+3) = {-front_distance+length, -bottom_distance+width, 0, coarse_size};
+y_coarse_top = coarse_y_distance_top_bot;
+y_coarse_bot = - coarse_y_distance_top_bot;
+x_coarse_left = - r_length/2 - coarse_x_distance_left_from_LE;
+
+// Define points
+p = newp;
+Point(p) = {x_left_dom, y_bot_dom, 0, mesh_size_coarse}; // domain bottom-left corner
+Point(p+1) = {x_right_dom, y_bot_dom, 0, mesh_size_coarse}; // domain bottom-right corner
+Point(p+2) = {x_right_dom, y_top_dom, 0, mesh_size_coarse}; // domain top-right corner
+Point(p+3) = {x_left_dom, y_top_dom, 0, mesh_size_coarse}; // domain top-left corner
+
+Point(p+4) = {x_coarse_left, y_coarse_bot, 0, mesh_size_medium}; // coarsening bottom-left corner
+Point(p+5) = {x_right_dom, y_coarse_bot, 0, mesh_size_medium}; // coarsening bottom-right corner
+Point(p+6) = {x_right_dom, y_coarse_top, 0, mesh_size_medium}; // coarsening top-right corner
+Point(p+7) = {x_coarse_left, y_coarse_top, 0, mesh_size_medium}; // coarsening top-left corner
+
 
 l = newl;
-// A no slip wall
+// Bottom wall (slip-free)
 Line(l) = {p, p+1};
-Line(l+1) = {p+1, p+2};
-Physical Line(1) = {l, l+1};
+Physical Line(1) = {l};
 
-// Outflow
-Line(l+2) = {p+2, p+3};
-Physical Line(2) = {l+2};
+// Right wall (outflow)
+Line(l+1) = {p+1, p+5};  // Bottom-right side
+Line(l+2) = {p+5, p+6};  // Middle-right side (coarsening bound right)
+Line(l+3) = {p+6, p+2};  // Top-right side
+Physical Line(2) = {l+1, l+2, l+3};
 
-// Top no slip wall
-Line(l+3) = {p+3, p+4};
-Line(l+4) = {p+4, p+5};
-Physical Line(1) += {l+3, l+4};
+// Top wall (slip free)
+Line(l+4) = {p+2, p+3};
+Physical Line(1) += {l+4};
 
 // Inlet
-Line(l+5) = {p+5, p};
+Line(l+5) = {p+3, p};
 Physical Line(3) = {l+5};
 
-// Coarse line
-Line(l+6) = {p+1, p+4};
+// Coarsening bound bottom
+Line(l+6) = {p+4, p+5};
 
+// Coarsening bound top
+Line(l+7) = {p+6, p+7};
+
+// Coarsening bound left
+Line(l+8) = {p+7, p+4};
+
+// Define coarse mesh portion of domain
+// Create line loop for coarse area
 coarse = newll;
-Line Loop(coarse) = {(l+1), (l+2), (l+3), -(l+6)};
-
+Line Loop(coarse) = {(l), (l+1), -(l+6), -(l+8), -(l+7), (l+3), (l+4), (l+5)};
+// Create surface and physical surface for coarse area
 s = news;
 Plane Surface(s) = {coarse};
-Physical Surface(1) = {s};
+Physical Surface(1) = {s};  // Physical surface to be mesh (then we'll add fine portion)
 
-// The one with cylinder 
-cframe[] = {l, (l+6), l+4, l+5};
+// Create line loop for fine area (containing the cylinder)
+fine_outer = newll;
+Line Loop(fine_outer) = {(l+6), (l+2), (l+7), (l+8)};  // Outer line loop of fine zone
+fine_inner = newll;
+Line Loop(fine_inner) = {cylinder[]}; // Inner line loop (cylinder)
 
-// // The surface to be mesh;
-outer = newll;
-Line Loop(outer) = {cframe[]};
-
-inner = newll;
-Line Loop(inner) = {cylinder[]};
-
+// Define final physical surface
 s = news;
-Plane Surface(s) = {inner, outer};
-Physical Surface(1) += {s};
+Plane Surface(s) = {fine_outer, fine_inner}; // Should be outer, inner, no??
+Physical Surface(1) += {s}; // // Add to surface to be mesh
 
-//Characteristic Length{cylinder[]} = cylinder_size;
-//Characteristic Length{coarse[]} = coarse_size;
-//Characteristic Length{cframe[]} = box_size;
+// First the jet and no slip surfaces of the cylinder are defined. Each jet surface is a physical line and all the no slip
+// cylinder surfaces are another. Then the domain is created.
