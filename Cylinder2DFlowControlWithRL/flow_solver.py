@@ -2,6 +2,9 @@ from jet_bcs import JetBCValue
 from dolfin import *
 import numpy as np
 
+# Solves FE problem (sets BCs,
+# There are three variational problems to be defined, one for each step in the IPCS scheme
+
 
 class FlowSolver(object):
     '''IPCS scheme with explicit treatment of nonlinearity.'''
@@ -16,7 +19,6 @@ class FlowSolver(object):
         mesh = Mesh()
         comm = mesh.mpi_comm()
         h5 = HDF5File(comm, mesh_file, 'r')
-
         h5.read(mesh, 'mesh', False)
 
         surfaces = MeshFunction('size_t', mesh, mesh.topology().dim()-1)
@@ -32,6 +34,7 @@ class FlowSolver(object):
         # Define function spaces
         V = VectorFunctionSpace(mesh, 'CG', 2)
         Q = FunctionSpace(mesh, 'CG', 1)
+        # Here, "CG" stands for Continuous Galerkin, implying the standard Lagrange family of elements.
 
         # Define trial and test functions
         u, v = TrialFunction(V), TestFunction(V)
@@ -54,8 +57,10 @@ class FlowSolver(object):
         n  = FacetNormal(mesh)
         f  = Constant((0, 0))
 
+        # Define strain-rate tensor
         epsilon = lambda u :sym(nabla_grad(u))
 
+        # Define stress tensor
         sigma = lambda u, p: 2*mu*epsilon(u) - p*Identity(2)
 
         # Define variational problem for step 1
@@ -75,25 +80,29 @@ class FlowSolver(object):
         a3 = dot(u, v)*dx
         L3 = dot(u_, v)*dx - dt*dot(nabla_grad(p_ - p_n), v)*dx
 
-        inflow_profile = flow_params['inflow_profile'](mesh, degree=2)
+        inflow_profile = flow_params['inflow_profile']
         # Define boundary conditions, first those that are constant in time
-        bcu_inlet = DirichletBC(V, inflow_profile, surfaces, inlet_tag)
-        # No slip
-        bcu_wall = DirichletBC(V, Constant((0, 0)), surfaces, wall_tag)
+        bcu_inlet = DirichletBC(V, inflow_profile, surfaces, inlet_tag)  # (Function space, value, subdomain, method to identify DOFs)
+        # Free stream. Note: use V.sub(0) or V.sub(1) to acces individual components
+        bcu_wall = DirichletBC(V, Constant((1, 0)), surfaces, wall_tag)
         bcu_cyl_wall = DirichletBC(V, Constant((0, 0)), surfaces, cylinder_noslip_tag)
         # Fixing outflow pressure
         bcp_outflow = DirichletBC(Q, Constant(0), surfaces, outlet_tag)
 
         # Now the expression for the jets
         # NOTE: they start with Q=0
-        radius = geometry_params['jet_radius']
         width = geometry_params['jet_width']
-        positions = geometry_params['jet_positions']
+        length_cylinder = geometry_params['height_cylinder'] * geometry_params['ar']
 
         bcu_jet = []
-        jet_tags = list(range(cylinder_noslip_tag+1, cylinder_noslip_tag+1+len(positions)))
+        jet_tags = range(cylinder_noslip_tag + 1, cylinder_noslip_tag + 1 + 2)  # 5 and 6 for 2 jets
 
-        jets = [JetBCValue(radius, width, theta0, Q=0, degree=1) for theta0 in positions]
+        jets = [Expression(('(-4/(width*width))*Q*(x[0]-length_cylinder/2)*(x[0]-length_cylinder/2+width)', '0'),  # top jet
+                           width=width, length_cylinder=length_cylinder, Q=0, degree=1),
+                Expression(('(4/(width*width))*Q*(x[0]-length_cylinder/2)*(x[0]-length_cylinder/2+width)', '0'),  # bot jet
+                           width=width, length_cylinder=length_cylinder, Q=0, degree=1)]
+        # If this doesnt work, maybe it has to do with how dolfin define the origin for Expressions
+        # Maybe try x[1] <= 0 ? - : +
 
         for tag, jet in zip(jet_tags, jets):
             bc = DirichletBC(V, jet, surfaces, tag)
@@ -190,36 +199,3 @@ class FlowSolver(object):
 
         # Share with the world
         return u_, p_
-
-
-def profile(mesh, degree):
-    bot = mesh.coordinates().min(axis=0)[1]
-    top = mesh.coordinates().max(axis=0)[1]
-    H = top - bot
-    
-    Um = 1.5
-
-    return Expression(('-4*Um*(x[1]-bot)*(x[1]-top)/H/H',
-                       '0'), bot=bot, top=top, H=H, Um=Um, degree=degree)
-
-# --------------------------------------------------------------------
-
-if __name__ == '__main__':
-    geometry_params = {'jet_radius': 0.05,
-                       'jet_width': 0.41,
-                       'jet_positions': [0, 270],
-                       'mesh': './geometry_2d.h5'}
-
-    flow_params = {'mu': 1E-3,
-                   'rho': 1,
-                   'inflow_profile': profile}
-    
-    solver_params = {'dt': 5E-4}
-
-
-    solver = FlowSolver(flow_params, geometry_params, solver_params)
-
-    while True:
-        u, p = solver.evolve([0, 0])
-
-        print('|u|= %g' % u.vector().norm('l2'), '|p|= %g' % p.vector().norm('l2'))

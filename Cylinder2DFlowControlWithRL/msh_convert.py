@@ -1,6 +1,10 @@
 import subprocess, os
 from dolfin import Mesh, HDF5File, MeshFunction
 
+'''
+Convert mesh file from gmsh output (.msh) to file readable by FEniCS (.h5)
+'''
+
 
 def convert(msh_file, h5_file):
     '''Convert msh file to h5_file'''
@@ -8,12 +12,13 @@ def convert(msh_file, h5_file):
     assert os.path.splitext(msh_file)[1] == '.msh'
     assert os.path.splitext(h5_file)[1] == '.h5'
 
-    # Get the xml mesh
+    # Get the xml mesh file
     xml_file = '.'.join([root, 'xml'])
     subprocess.call(['dolfin-convert %s %s' % (msh_file, xml_file)], shell=True)
     # Success?
     assert os.path.exists(xml_file)
 
+    # Generate .h5 mesh file
     mesh = Mesh(xml_file)
     out = HDF5File(mesh.mpi_comm(), h5_file, 'w')
     out.write(mesh, 'mesh')

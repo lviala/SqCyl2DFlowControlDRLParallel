@@ -24,7 +24,8 @@ class RemoteEnvironmentClient(Environment):
                  buffer_size=262144,
                  timing_print=False,
                  ):
-        """(port, host) is the necessary info for connecting to the Server socket.
+        """
+        (port, host) is the necessary info for connecting to the Server socket.
         """
 
         # templated tensorforce stuff

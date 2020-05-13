@@ -1,3 +1,7 @@
+"""
+Environment seen by the RL agent. It is the main class of the repo.
+"""
+
 #from printind.printind_decorators import printi_all_method_calls as printidc
 #from printind.printind_function import printi, printiv
 from tensorforce.environments import Environment
@@ -45,36 +49,20 @@ import shutil
 # printiv(environment.actions)
 # environment.actions = {'max_value': 1.0, 'shape': (1,), 'min_value': -1.0, 'type': 'float'}
 
-
-def constant_profile(mesh, degree):
-    '''
-    Time independent inflow profile.
-    '''
-    bot = mesh.coordinates().min(axis=0)[1]
-    top = mesh.coordinates().max(axis=0)[1]
-
-    H = top - bot
-
-    Um = 1.5
-
-    return Expression(('-4*Um*(x[1]-bot)*(x[1]-top)/H/H',
-                       '0'), bot=bot, top=top, H=H, Um=Um, degree=degree, time=0)
-
-
 class RingBuffer():
     "A 1D ring buffer using numpy arrays"
     def __init__(self, length):
-        self.data = np.zeros(length, dtype='f')
-        self.index = 0
+        self.data = np.zeros(length, dtype='f')  # Initialise ring array 'data' as length-array of floats
+        self.index = 0  # Initialise InPointer as 0 (where new data begins to be written)
 
     def extend(self, x):
         "adds array x to ring buffer"
-        x_index = (self.index + np.arange(x.size)) % self.data.size
-        self.data[x_index] = x
-        self.index = x_index[-1] + 1
+        x_indices = (self.index + np.arange(x.size)) % self.data.size  # Find indices that x will occupy in 'data' array
+        self.data[x_indices] = x  # Input the new array into ring buffer ('data')
+        self.index = x_indices[-1] + 1  # Find new index for next new data
 
     def get(self):
-        "Returns the first-in-first-out data in the ring buffer"
+        "Returns the first-in-first-out data in the ring buffer (returns data in order of introduction)"
         idx = (self.index + np.arange(self.data.size)) % self.data.size
         return self.data[idx]
 
@@ -114,7 +102,7 @@ class Env2DCylinder(Environment):
         self.simu_name = simu_name
 
 
-        #Relatif a l'ecriture des .csv
+        # Initialise arrays of episode data + episode number. If previous output.csv exists, take current episode as last in there
         name="output.csv"
         last_row = None
         if(os.path.exists("saved_models/"+name)):
@@ -136,7 +124,7 @@ class Env2DCylinder(Environment):
 
         self.start_class()
 
-        #printi("--- done init ---")
+        print("--- done buffers initialisation ---")
 
     def start_class(self):
         self.solver_step = 0
@@ -149,12 +137,13 @@ class Env2DCylinder(Environment):
 
         self.area_probe = None
 
+       # Create ring buffers to hold recent history of jet values, probe values, lift, drag, area
         self.history_parameters = {}
 
-        for crrt_jet in range(len(self.geometry_params["jet_positions"])):
+        for crrt_jet in range(2):
             self.history_parameters["jet_{}".format(crrt_jet)] = RingBuffer(self.size_history)
 
-        self.history_parameters["number_of_jets"] = len(self.geometry_params["jet_positions"])
+        self.history_parameters["number_of_jets"] = 2
 
         for crrt_probe in range(len(self.output_params["locations"])):
             if self.output_params["probe_type"] == 'pressure':
@@ -164,6 +153,7 @@ class Env2DCylinder(Environment):
                 self.history_parameters["probe_{}_v".format(crrt_probe)] = RingBuffer(self.size_history)
 
         self.history_parameters["number_of_probes"] = len(self.output_params["locations"])
+        print("Number of probes: {}".format(self.history_parameters["number_of_probes"]))
 
         self.history_parameters["drag"] = RingBuffer(self.size_history)
         self.history_parameters["lift"] = RingBuffer(self.size_history)
@@ -171,8 +161,8 @@ class Env2DCylinder(Environment):
 
         # ------------------------------------------------------------------------
         # remesh if necessary
-        h5_file = '.'.join([self.path_root, 'h5'])
-        msh_file = '.'.join([self.path_root, 'msh'])
+        h5_file = '.'.join([self.path_root, 'h5'])  # mesh/turek_2d.h5
+        msh_file = '.'.join([self.path_root, 'msh'])  # mesh/turek_2d.msh
         self.geometry_params['mesh'] = h5_file
 
         # Regenerate mesh?
@@ -180,23 +170,25 @@ class Env2DCylinder(Environment):
 
             if self.verbose > 0:
                 print("Remesh")
-                #printi("generate_mesh start...")
 
             generate_mesh(self.geometry_params, template=self.geometry_params['template'])
 
             if self.verbose > 0:
-                print("generate_mesh done!")
+                print("Generate .msh done")
             print(msh_file)
             assert os.path.exists(msh_file)
 
             convert(msh_file, h5_file)
+            if self.verbose > 0:
+                print("Convert to .h5 done")
+            print(h5_file)
             assert os.path.exists(h5_file)
 
         # ------------------------------------------------------------------------
         # if necessary, load initialization fields
         if self.n_iter_make_ready is None:
             if self.verbose > 0:
-                print("Load initial flow")
+                print("Load initial flow state")
 
             self.flow_params['u_init'] = 'mesh/u_init.xdmf'
             self.flow_params['p_init'] = 'mesh/p_init.xdmf'
@@ -211,16 +203,16 @@ class Env2DCylinder(Environment):
                 self.history_parameters["number_of_probes"] = 0
 
             if not "number_of_jets" in self.history_parameters:
-                self.history_parameters["number_of_jets"] = len(self.geometry_params["jet_positions"])
-                #printi("Warning!! The number of jets was not set in the loaded hdf5 file")
+                self.history_parameters["number_of_jets"] = 2
+                print("Warning!! The number of jets was not set in the loaded hdf5 file")
 
             if not "lift" in self.history_parameters:
                 self.history_parameters["lift"] = RingBuffer(self.size_history)
-                #printi("Warning!! No value for the lift founded")
+                print("Warning!! No lift history found in the loaded hdf5 file")
 
             if not "recirc_area" in self.history_parameters:
                 self.history_parameters["recirc_area"] = RingBuffer(self.size_history)
-                #printi("Warning!! No value for the recirculation area founded")
+                print("Warning!! No recirculation area history found in the loaded hdf5 file")
 
             # if not the same number of probes, reset
             if not self.history_parameters["number_of_probes"] == len(self.output_params["locations"]):
@@ -233,7 +225,7 @@ class Env2DCylinder(Environment):
 
                 self.history_parameters["number_of_probes"] = len(self.output_params["locations"])
 
-                #printi("Warning!! Number of probes was changed! Probes buffer content reseted")
+                print("Warning!! Number of probes was changed! Probes buffer content reset")
 
                 self.resetted_number_probes = True
 
@@ -249,16 +241,16 @@ class Env2DCylinder(Environment):
         elif self.output_params["probe_type"] == 'velocity':
             self.ann_probes = VelocityProbeANN(self.flow, self.output_params['locations'])
         else:
-            raise RuntimeError("unknown probe type")
+            raise RuntimeError("Unknown probe type")
 
-        # Setup drag measurement
+        # Setup drag and lift measurement
         self.drag_probe = PenetratedDragProbeANN(self.flow)
         self.lift_probe = PenetratedLiftProbeANN(self.flow)
 
         # ------------------------------------------------------------------------
         # No flux from jets for starting
-        self.Qs = np.zeros(len(self.geometry_params['jet_positions']))
-        self.action = np.zeros(len(self.geometry_params['jet_positions']))
+        self.Qs = np.zeros(2)
+        self.action = np.zeros(2)
 
         # ------------------------------------------------------------------------
         # prepare the arrays for plotting positions
@@ -274,8 +266,7 @@ class Env2DCylinder(Environment):
                 path = 'results/area_out.pvd'
             self.area_probe = RecirculationAreaProbe(self.u_, 0, store_path=path)
             if self.verbose > 0:
-                print("Compute initial flow")
-                #printiv(self.n_iter_make_ready)
+                print("Compute initial flow for {} steps".format(self.n_iter_make_ready))
 
             for _ in range(self.n_iter_make_ready):
                 self.u_, self.p_ = self.flow.evolve(self.Qs)
@@ -307,7 +298,7 @@ class Env2DCylinder(Environment):
         # ----------------------------------------------------------------------
         # if reading from disk, show to check everything ok
         if self.n_iter_make_ready is None:
-            #Let's start in a random position of the vortex shading
+            # If random_start == True, let's start in a random position of the vortex shedding
             if self.optimization_params["random_start"]:
                 rd_advancement = np.random.randint(650)
                 for j in range(rd_advancement):
@@ -326,17 +317,11 @@ class Env2DCylinder(Environment):
             self.recirc_area = self.area_probe.sample(self.u_, self.p_)
 
             self.write_history_parameters()
-            # self.visual_inspection()
-            # self.output_data()
-
-            # self.solver_step += 1
-
-            # time.sleep(10)
 
         # ----------------------------------------------------------------------
         # if necessary, fill the probes buffer
         if self.resetted_number_probes:
-            #printi("Need to fill again the buffer; modified number of probes")
+            print("Need to fill again the buffer; modified number of probes")
 
             for _ in range(self.size_history):
                 self.execute()
@@ -344,16 +329,10 @@ class Env2DCylinder(Environment):
         # ----------------------------------------------------------------------
         # ready now
 
-        #Initialisation du prob de recirculation area
-        #path=''
-        #if "dump" in self.inspection_params:
-        #    path = 'results/area_out.pvd'
-        #self.area_probe = RecirculationAreaProbe(self.u_, 0, store_path=path)
-
         self.ready_to_use = True
 
     def write_history_parameters(self):
-        for crrt_jet in range(len(self.geometry_params["jet_positions"])):
+        for crrt_jet in range(2):
             self.history_parameters["jet_{}".format(crrt_jet)].extend(self.Qs[crrt_jet])
 
         if self.output_params["probe_type"] == 'pressure':
@@ -369,42 +348,49 @@ class Env2DCylinder(Environment):
         self.history_parameters["recirc_area"].extend(np.array(self.recirc_area))
 
     def compute_positions_for_plotting(self):
-        # where the pressure probes are
+        '''
+        Obtain the coordinates of the probes and the jets for plotting.
+        '''
+
+        ## where the pressure probes are
         self.list_positions_probes_x = []
         self.list_positions_probes_y = []
 
-        # total_number_of_probes = len(self.output_params['locations'])
-
-        #printiv(total_number_of_probes)
-
-        # get the positions
+        # get the coordinates of probe positions
         for crrt_probe in self.output_params['locations']:
             if self.verbose > 2:
                 print(crrt_probe)
-
             self.list_positions_probes_x.append(crrt_probe[0])
             self.list_positions_probes_y.append(crrt_probe[1])
 
-        # where the jets are
-        radius_cylinder = self.geometry_params['cylinder_size'] / 2.0 / self.geometry_params['clscale']
+        ## where the jets are
         self.list_positions_jets_x = []
         self.list_positions_jets_y = []
 
-        # compute the positions
-        for crrt_jet_angle in self.geometry_params['jet_positions']:
-            crrt_jet_angle_rad = math.pi / 180.0 * crrt_jet_angle
-            crrt_x = radius_cylinder * math.cos(crrt_jet_angle_rad)
-            crrt_y = radius_cylinder * math.sin(crrt_jet_angle_rad)
+        height_cylinder = self.geometry_params['height_cylinder']
+        length_cylinder = height_cylinder * self.geometry_params['ar']
+        jet_width = self.geometry_params['jet_width']
+
+        # get the coordinates of jet positions
+        crrt_x = length_cylinder / 2 - jet_width / 2
+        for jet in range(2):
+            crrt_y = height_cylinder / 2 - jet * height_cylinder
             self.list_positions_jets_x.append(crrt_x)
             self.list_positions_jets_y.append(1.1 * crrt_y)
 
     def show_flow(self):
+
+        height_cylinder = self.geometry_params['height_cylinder']
+        length_cylinder = height_cylinder * self.geometry_params['ar']
+
         plt.figure()
         plot(self.u_)
         plt.scatter(self.list_positions_probes_x, self.list_positions_probes_y, c='k', marker='o')
         plt.scatter(self.list_positions_jets_x, self.list_positions_jets_y, c='r', marker='o')
-        plt.xlim([-self.geometry_params['front_distance'], self.geometry_params['length'] - self.geometry_params['front_distance']])
-        plt.ylim([-self.geometry_params['bottom_distance'], self.geometry_params['width'] - self.geometry_params['bottom_distance']])
+        plt.xlim([-length_cylinder / 2 - self.geometry_params['x_upstream'],
+                  length_cylinder / 2 + self.geometry_params['x_downstream']])
+        plt.ylim([-self.geometry_params['height_domain'] / 2 - self.geometry_params['cylinder_y_shift'],
+                  self.geometry_params['height_domain'] / 2 + self.geometry_params['cylinder_y_shift']])
         plt.ylabel("Y")
         plt.xlabel("X")
         plt.show()
@@ -414,8 +400,10 @@ class Env2DCylinder(Environment):
         cb = plt.colorbar(p, fraction=0.1, shrink=0.3)
         plt.scatter(self.list_positions_probes_x, self.list_positions_probes_y, c='k', marker='o')
         plt.scatter(self.list_positions_jets_x, self.list_positions_jets_y, c='r', marker='o')
-        plt.xlim([-self.geometry_params['front_distance'], self.geometry_params['length'] - self.geometry_params['front_distance']])
-        plt.ylim([-self.geometry_params['bottom_distance'], self.geometry_params['width'] - self.geometry_params['bottom_distance']])
+        plt.xlim([-length_cylinder / 2 - self.geometry_params['x_upstream'],
+                  length_cylinder / 2 + self.geometry_params['x_downstream']])
+        plt.ylim([-self.geometry_params['height_domain'] / 2 - self.geometry_params['cylinder_y_shift'],
+                  self.geometry_params['height_domain'] / 2 + self.geometry_params['cylinder_y_shift']])
         plt.ylabel("Y")
         plt.xlabel("X")
         plt.tight_layout()
@@ -427,12 +415,12 @@ class Env2DCylinder(Environment):
 
         linestyles = ['-', '--', ':', '-.']
 
-        for crrt_jet in range(len(self.geometry_params["jet_positions"])):
+        for crrt_jet in range(2):
             crrt_jet_data = self.history_parameters["jet_{}".format(crrt_jet)].get()
             plt.plot(crrt_jet_data, label="jet {}".format(crrt_jet), linestyle=linestyles[crrt_jet], linewidth=1.5)
         plt.legend(loc=2)
-        plt.ylabel("control Q")
-        plt.xlabel("actuation step")
+        plt.ylabel("Control Q")
+        plt.xlabel("Actuation step")
         plt.tight_layout()
         plt.pause(1.0)
         plt.savefig("saved_figures/control_episode_{}.pdf".format(self.episode_number))
@@ -443,7 +431,8 @@ class Env2DCylinder(Environment):
         plt.figure()
         crrt_drag = self.history_parameters["drag"].get()
         plt.plot(crrt_drag, label="episode drag", linewidth=1.2)
-        plt.plot([0, self.size_history - 1], [self.inspection_params['line_drag'], self.inspection_params['line_drag']], label="mean drag no control", linewidth=2.5, linestyle="--")
+        plt.plot([0, self.size_history - 1], [self.inspection_params['line_drag'], self.inspection_params['line_drag']],
+                 label="mean drag no control", linewidth=2.5, linestyle="--")
         plt.ylabel("measured drag D")
         plt.xlabel("actuation step")
         range_drag_plot = self.inspection_params["range_drag_plot"]
@@ -455,15 +444,20 @@ class Env2DCylinder(Environment):
         plt.show()
         plt.pause(2.0)
 
-    def visual_inspection(self):
+    def visual_inspection(self):  # Dynamic plotting AND command line information during runs
+        '''
+        Create dynamic plots, show output data to command line and save it to saved_models/debug.csv (or to
+        saved_models/test_strategy.csv if single run)
+        '''
         total_number_subplots = 5
         crrt_subplot = 1
 
         if(not self.initialized_visualization and self.inspection_params["plot"] != False):
-            plt.ion()
+            plt.ion()  # Turn the interactive plot mode on
             plt.subplots(total_number_subplots, 1)
             # ax.set_xlim([0, self.nbr_points_animate_plot])
             # ax.set_ylim([0, 1024])
+            print("Dynamic plotting turned on")
 
             self.initialized_visualization = True
 
@@ -472,27 +466,37 @@ class Env2DCylinder(Environment):
 
             if self.solver_step % modulo_base == 0:
 
+                # Plot velocity field
+                height_cylinder = self.geometry_params['height_cylinder']
+                length_cylinder = height_cylinder * self.geometry_params['ar']
+
                 plt.subplot(total_number_subplots, 1, crrt_subplot)
                 plot(self.u_)
                 plt.scatter(self.list_positions_probes_x, self.list_positions_probes_y, c='k', marker='o')
                 plt.scatter(self.list_positions_jets_x, self.list_positions_jets_y, c='r', marker='o')
-                plt.xlim([-self.geometry_params['front_distance'], self.geometry_params['length'] - self.geometry_params['front_distance']])
-                plt.ylim([-self.geometry_params['bottom_distance'], self.geometry_params['width'] - self.geometry_params['bottom_distance']])
+                plt.xlim([-length_cylinder / 2 - self.geometry_params['x_upstream'],
+                          length_cylinder / 2 + self.geometry_params['x_downstream']])
+                plt.ylim([-self.geometry_params['height_domain'] / 2 - self.geometry_params['cylinder_y_shift'],
+                          self.geometry_params['height_domain'] / 2 + self.geometry_params['cylinder_y_shift']])
                 plt.ylabel("V")
                 crrt_subplot += 1
 
+                # Plot pressure field
                 plt.subplot(total_number_subplots, 1, crrt_subplot)
                 plot(self.p_)
                 plt.scatter(self.list_positions_probes_x, self.list_positions_probes_y, c='k', marker='o')
                 plt.scatter(self.list_positions_jets_x, self.list_positions_jets_y, c='r', marker='o')
-                plt.xlim([-self.geometry_params['front_distance'], self.geometry_params['length'] - self.geometry_params['front_distance']])
-                plt.ylim([-self.geometry_params['bottom_distance'], self.geometry_params['width'] - self.geometry_params['bottom_distance']])
+                plt.xlim([-length_cylinder / 2 - self.geometry_params['x_upstream'],
+                          length_cylinder / 2 + self.geometry_params['x_downstream']])
+                plt.ylim([-self.geometry_params['height_domain'] / 2 - self.geometry_params['cylinder_y_shift'],
+                          self.geometry_params['height_domain'] / 2 + self.geometry_params['cylinder_y_shift']])
                 plt.ylabel("P")
                 crrt_subplot += 1
 
+                # Plot jets MFR
                 plt.subplot(total_number_subplots, 1, crrt_subplot)
                 plt.cla()
-                for crrt_jet in range(len(self.geometry_params["jet_positions"])):
+                for crrt_jet in range(2):
                     crrt_jet_data = self.history_parameters["jet_{}".format(crrt_jet)].get()
                     plt.plot(crrt_jet_data, label="jet {}".format(crrt_jet))
                 plt.legend(loc=6)
@@ -520,6 +524,8 @@ class Env2DCylinder(Environment):
                 #     plt.ylim(range_pressure_plot)
                 # crrt_subplot += 1
 
+
+                # Plot lift and drag recent history
                 plt.subplot(total_number_subplots, 1, crrt_subplot)
                 ax1 = plt.gca()
                 plt.cla()
@@ -558,7 +564,7 @@ class Env2DCylinder(Environment):
 
                 crrt_subplot += 1
 
-
+                # Plot recirculation area recent history
                 plt.subplot(total_number_subplots, 1, crrt_subplot)
                 plt.cla()
                 crrt_area = self.history_parameters["recirc_area"].get()
@@ -576,28 +582,31 @@ class Env2DCylinder(Environment):
                 plt.pause(0.5)
 
         if self.solver_step % self.inspection_params["dump"] == 0 and self.inspection_params["dump"] < 10000:
-            #Affichage en ligne de commande
-            print("%s | Ep N: %4d, step: %4d, Rec Area: %.4f, drag: %.4f, lift: %.4f"%(self.simu_name, 
+            # Display information in command line
+            print("%s | Ep N: %4d, step: %4d, Rec Area: %.4f, drag: %.4f, lift: %.4f, jet_0: %.4f"%(self.simu_name,
             self.episode_number,
             self.solver_step,
             self.history_parameters["recirc_area"].get()[-1],
             self.history_parameters["drag"].get()[-1],
-            self.history_parameters["lift"].get()[-1]))
+            self.history_parameters["lift"].get()[-1],
+            self.history_parameters["jet_0"].get()[-1]))
 
-            #Sauvegarde dans un fichier debug de tout ce qui se passe !
+            # Save everything that happens in a debug.csv file!
             name = "debug.csv"
             if(not os.path.exists("saved_models")):
                 os.mkdir("saved_models")
             if(not os.path.exists("saved_models/"+name)):
                 with open("saved_models/"+name, "w") as csv_file:
                     spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
-                    spam_writer.writerow(["Name", "Episode", "Step", "RecircArea", "Drag", "lift"])
+                    spam_writer.writerow(["Name", "Episode", "Step", "RecircArea", "Drag", "Lift", "Jet0", "Jet1"])
                     spam_writer.writerow([self.simu_name,
                                           self.episode_number,
                                           self.solver_step,
                                           self.history_parameters["recirc_area"].get()[-1],
                                           self.history_parameters["drag"].get()[-1],
-                                          self.history_parameters["lift"].get()[-1]])
+                                          self.history_parameters["lift"].get()[-1]],
+                                          self.history_parameters["jet_0"].get()[-1],
+                                          self.history_parameters["jet_1"].get()[-1])
             else:
                 with open("saved_models/"+name, "a") as csv_file:
                     spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
@@ -606,13 +615,18 @@ class Env2DCylinder(Environment):
                                           self.solver_step,
                                           self.history_parameters["recirc_area"].get()[-1],
                                           self.history_parameters["drag"].get()[-1],
-                                          self.history_parameters["lift"].get()[-1]])
+                                          self.history_parameters["lift"].get()[-1]],
+                                          self.history_parameters["jet_0"].get()[-1],
+                                          self.history_parameters["jet_1"].get()[-1])
 
         if("single_run" in self.inspection_params and self.inspection_params["single_run"] == True):
             # if ("dump" in self.inspection_params and self.inspection_params["dump"] > 10000):
                 self.sing_run_output()
 
     def sing_run_output(self):
+        '''
+        Perform output for single runs (testing of strategies or baseline flow)
+        '''
         name = "test_strategy.csv"
         if(not os.path.exists("saved_models")):
             os.mkdir("saved_models")
@@ -628,29 +642,25 @@ class Env2DCylinder(Environment):
         return
 
     def output_data(self):
-        # if "step" in self.inspection_params:
-        #     modulo_base = self.inspection_params["step"]
-
-        #     if self.solver_step % modulo_base == 0:
-        #         if self.verbose > 0:
-        #             print(self.solver_step)
-        #             print(self.Qs)
-        #             print(self.probes_values)
-        #             print(self.drag)
-        #             print(self.lift)
-        #             print(self.recirc_area)
-        #             pass
+        '''
+        Extend arrays of episode drag,lift and recirculation
+        If episode just ended, record avgs into saved_models/output.csv and empty episode lists
+        Update best_model if improved
+        Generate vtu files for area, u and p
+        '''
 
         if "dump" in self.inspection_params and self.inspection_params["dump"] < 10000:
             modulo_base = self.inspection_params["dump"]
 
-            #Sauvegarde du drag dans le csv a la fin de chaque episode
+            # Extend drag, lif and area histories
             self.episode_drags = np.append(self.episode_drags, [self.history_parameters["drag"].get()[-1]])
             self.episode_areas = np.append(self.episode_areas, [self.history_parameters["recirc_area"].get()[-1]])
             self.episode_lifts = np.append(self.episode_lifts, [self.history_parameters["lift"].get()[-1]])
 
+            # If new episode, record avg qtys for last ep
             if(self.last_episode_number != self.episode_number and "single_run" in self.inspection_params and self.inspection_params["single_run"] == False):
                 self.last_episode_number = self.episode_number
+                # Find avgs for the 2nd half of each ep
                 avg_drag = np.average(self.episode_drags[len(self.episode_drags)//2:])
                 avg_area = np.average(self.episode_areas[len(self.episode_areas)//2:])
                 avg_lift = np.average(self.episode_lifts[len(self.episode_lifts)//2:])
@@ -679,31 +689,33 @@ class Env2DCylinder(Environment):
                             data = csv.reader(csvfile, delimiter = ';')
                             for row in data:
                                 lastrow = row
-                            last_iter = lastrow[1]
+                            last_iter_drag = lastrow[1]  # get avg drag of last episode
 
                         with open("best_model/output.csv", 'r') as csvfile:
                             data = csv.reader(csvfile, delimiter = ';')
                             for row in data:
                                 lastrow = row
-                            best_iter = lastrow[1]
+                            best_iter_drag = lastrow[1]  # get avg drag of best episode in best_model/
 
-                        if float(best_iter) < float(last_iter):
+                        # If last episode model is better than current best model, we replace the best model
+                        if float(best_iter_drag) < float(last_iter_drag):
                             print("best_model updated")
                             if(os.path.exists("best_model")):
                                 shutil.rmtree("best_model")
                             shutil.copytree("saved_models", "best_model")
 
-            # if self.solver_step % modulo_base == 0:
+            if self.solver_step % modulo_base == 0:
 
-            #     if not self.initialized_output:
-            #         self.u_out = File('results/u_out.pvd')
-            #         self.p_out = File('results/p_out.pvd')
-            #         self.initialized_output = True
+                if not self.initialized_output:  # Initialize results .pvd output if not done already
+                    self.u_out = File('results/u_out.pvd')
+                    self.p_out = File('results/p_out.pvd')
+                    self.initialized_output = True
 
-            #     if(not self.area_probe is None):
-            #         self.area_probe.dump(self.area_probe)
-            #     self.u_out << self.flow.u_
-            #     self.p_out << self.flow.p_
+                # Generate vtu files for area, drag and lift
+                if(not self.area_probe is None):
+                    self.area_probe.dump(self.area_probe)
+                self.u_out << self.flow.u_
+                self.p_out << self.flow.p_
 
 
     def __str__(self):
@@ -714,12 +726,18 @@ class Env2DCylinder(Environment):
         self.ready_to_use = False
 
     def reset(self):
+        """
+        Reset environment and setup for new episode.
+
+        Returns:
+            initial state of reset environment.
+        """
         if self.solver_step > 0:
             mean_accumulated_drag = self.accumulated_drag / self.solver_step
             mean_accumulated_lift = self.accumulated_lift / self.solver_step
 
             if self.verbose > -1:
-                print("mean accumulated drag on the whole episode: {}".format(mean_accumulated_drag))
+                print("Mean accumulated drag on the whole episode: {}".format(mean_accumulated_drag))
 
         if self.inspection_params["show_all_at_reset"]:
             self.show_drag()
@@ -736,16 +754,24 @@ class Env2DCylinder(Environment):
         return(next_state)
 
     def execute(self, actions=None):
+        '''
+        Run solver for one action step, until next DRL state (For the flow solver this means to run for number_steps_execution)
+        In this interval, control is made continuous between actions and net MFR = 0 is imposed
+        :param actions:
+        :return: next state (probe values at end of action step)
+                 terminal
+                 reward (- CD mean over action step + 0.2 * abs of CL mean over action step)
+        '''
         action = actions
 
         if self.verbose > 1:
-            print("--- call execute ---")
+            print("--- Call execute ---")
 
         if action is None:
             if self.verbose > -1:
-                print("carefull, no action given; by default, no jet!")
+                print("Careful, no action given. By default, no jet (Q=0)!")
 
-            nbr_jets = len(self.geometry_params["jet_positions"])
+            nbr_jets = 2
             action = np.zeros((nbr_jets, ))
 
         if self.verbose > 2:
@@ -754,47 +780,47 @@ class Env2DCylinder(Environment):
         self.previous_action = self.action
         self.action = action
 
-        # to execute several numerical integration steps
-        for crrt_action_nbr in range(self.number_steps_execution):
+        # Run for one action step (several -number_steps_execution- numerical timesteps keeping action=const but changing control)
+        for crrt_control_nbr in range(self.number_steps_execution):
 
-            # try to force a continuous / smoothe(r) control
+            # Try to enforce a continuous, smoother control
             if "smooth_control" in self.optimization_params:
-                # printiv(self.optimization_params["smooth_control"])
-                # printiv(actions)
-                # printiv(self.Qs)
-                # self.Qs += self.optimization_params["smooth_control"] * (np.array(action) - self.Qs)  # the solution originally used in the JFM paper
-                self.Qs = np.array(self.previous_action) + (np.array(self.action) - np.array(self.previous_action)) / self.number_steps_execution * (crrt_action_nbr + 1)  # a linear change in the control
+                # Original approach used in the JFM paper
+                # self.Qs += self.optimization_params["smooth_control"] * (np.array(action) - self.Qs)
+
+                # Linear interpolation in the control
+                self.Qs = np.array(self.previous_action) + (np.array(self.action) - np.array(self.previous_action)) / self.number_steps_execution * (crrt_control_nbr + 1)
             else:
                 self.Qs = np.transpose(np.array(action))
 
-            # impose a zero net Qs
+            # Impose a zero net Qs
             if "zero_net_Qs" in self.optimization_params:
                 if self.optimization_params["zero_net_Qs"]:
                     self.Qs = self.Qs - np.mean(self.Qs)
 
-            # evolve one numerical timestep forward
+            # Evolve one numerical timestep forward
             self.u_, self.p_ = self.flow.evolve(self.Qs)
 
-            # displaying information that has to do with the solver itself
+            # Output flow data when relevant
             self.visual_inspection()
             self.output_data()
 
-            # we have done one solver step
+            # We have done one solver step
             self.solver_step += 1
 
-            # sample probes and drag
+            # Sample probes and drag
             self.probes_values = self.ann_probes.sample(self.u_, self.p_).flatten()
             self.drag = self.drag_probe.sample(self.u_, self.p_)
             self.lift = self.lift_probe.sample(self.u_, self.p_)
             self.recirc_area = self.area_probe.sample(self.u_, self.p_)
 
-            # write to the history buffers
+            # Write to the history buffers
             self.write_history_parameters()
 
             self.accumulated_drag += self.drag
             self.accumulated_lift += self.lift
 
-        # TODO: the next_state may incorporte more information: maybe some time information?
+        # TODO: the next_state may incorporate more information: maybe some time information?
         next_state = np.transpose(np.array(self.probes_values))
 
         if self.verbose > 2:
@@ -815,39 +841,46 @@ class Env2DCylinder(Environment):
 
         return(next_state, terminal, reward)
 
-        # return area
-
     def compute_reward(self):
+        mean_drag_no_control = - self.inspection_params['line_drag']
+
         # NOTE: reward should be computed over the whole number of iterations in each execute loop
         if self.reward_function == 'plain_drag':  # a bit dangerous, may be injecting some momentum
             values_drag_in_last_execute = self.history_parameters["drag"].get()[-self.number_steps_execution:]
-            return(np.mean(values_drag_in_last_execute) + 0.159)  # TODO: the 0.159 value is a proxy value corresponding to the mean drag when no control; may depend on the geometry
+            return(np.mean(values_drag_in_last_execute) + mean_drag_no_control)
         elif(self.reward_function == 'recirculation_area'):
             return - self.area_probe.sample(self.u_, self.p_)
         elif(self.reward_function == 'max_recirculation_area'):
             return self.area_probe.sample(self.u_, self.p_)
         elif self.reward_function == 'drag':  # a bit dangerous, may be injecting some momentum
-            return self.history_parameters["drag"].get()[-1] + 0.159
+            return self.history_parameters["drag"].get()[-1] + mean_drag_no_control
         elif self.reward_function == 'drag_plain_lift':  # a bit dangerous, may be injecting some momentum
             avg_length = min(500, self.number_steps_execution)
             avg_drag = np.mean(self.history_parameters["drag"].get()[-avg_length:])
             avg_lift = np.mean(self.history_parameters["lift"].get()[-avg_length:])
-            return avg_drag + 0.159 - 0.2 * abs(avg_lift)
+            return avg_drag + mean_drag_no_control - 0.2 * abs(avg_lift)
         elif self.reward_function == 'max_plain_drag':  # a bit dangerous, may be injecting some momentum
             values_drag_in_last_execute = self.history_parameters["drag"].get()[-self.number_steps_execution:]
-            return - (np.mean(values_drag_in_last_execute) + 0.159)
+            return - (np.mean(values_drag_in_last_execute) + mean_drag_no_control)
         elif self.reward_function == 'drag_avg_abs_lift':  # a bit dangerous, may be injecting some momentum
             avg_length = min(500, self.number_steps_execution)
             avg_abs_lift = np.mean(np.absolute(self.history_parameters["lift"].get()[-avg_length:]))
             avg_drag = np.mean(self.history_parameters["drag"].get()[-avg_length:])
-            return avg_drag + 0.159 - 0.2 * avg_abs_lift
+            return avg_drag + mean_drag_no_control - 0.2 * avg_abs_lift
 
         # TODO: implement some reward functions that take into account how much energy / momentum we inject into the flow
 
         else:
-            raise RuntimeError("reward function {} not yet implemented".format(self.reward_function))
+            raise RuntimeError("Reward function {} not yet implemented".format(self.reward_function))
 
     def states(self):
+        """
+        Return the state space. Might include subdicts if multiple states are available simultaneously.
+
+        Returns: dict of state properties (shape and type).
+
+        """
+
         if self.output_params["probe_type"] == 'pressure':
             return dict(type='float',
                         shape=(len(self.output_params["locations"]) * self.optimization_params["num_steps_in_pressure_history"], )
@@ -859,11 +892,17 @@ class Env2DCylinder(Environment):
                         )
 
     def actions(self):
+        """
+        Return the action space. Might include subdicts if multiple actions are available simultaneously.
+
+        Returns: dict of action properties (type, shape, min val, max val).
+        """
+
         # NOTE: we could also have several levels of dict in dict, for example:
         # return { str(i): dict(continuous=True, min_value=0, max_value=1) for i in range(self.n + 1) }
 
         return dict(type='float',
-                    shape=(len(self.geometry_params["jet_positions"]), ),
+                    shape=(2, ),
                     min_value=self.optimization_params["min_value_jet_MFR"],
                     max_value=self.optimization_params["max_value_jet_MFR"])
 

@@ -47,7 +47,7 @@ agent = Agent.create(
 agent.initialize()
 
 
-
+# If previous evaluation results exist, delete them
 if(os.path.exists("saved_models/test_strategy.csv")):
     os.remove("saved_models/test_strategy.csv")
 
@@ -55,24 +55,22 @@ if(os.path.exists("saved_models/test_strategy_avg.csv")):
     os.remove("saved_models/test_strategy_avg.csv")
 
 def one_run():
-    print("start simulation")
+    print("Start simulation")
     state = example_environment.reset()
     example_environment.render = True
 
-    for k in range(10*nb_actuations):
-        #environment.print_state()
+    for k in range(3*nb_actuations):
         action = agent.act(state, deterministic=deterministic, independent=True)
         state, terminal, reward = example_environment.execute(action)
-    # just for test, too few timesteps
-    # runner.run(episodes=10000, max_episode_timesteps=20, episode_finished=episode_finished)
 
     data = np.genfromtxt("saved_models/test_strategy.csv", delimiter=";")
     data = data[1:,1:]
-    m_data = np.average(data[len(data)//2:], axis=0)
+    m_data = np.average(data[len(data)//2:], axis=0)  # Calculate means for the second half of the single episode
     nb_jets = len(m_data)-4
     # Print statistics
     print("Single Run finished. AvgDrag : {}, AvgRecircArea : {}".format(m_data[1], m_data[2]))
 
+    # Output average values for the single run (Note that values for each timestep are already reported as we execute)
     name = "test_strategy_avg.csv"
     if(not os.path.exists("saved_models")):
         os.mkdir("saved_models")

@@ -1,84 +1,101 @@
 import os, subprocess
-from numpy import deg2rad
 # from printind.printind_function import printiv
 
-
+# Args will be the geometry params (or cmd line args if called from there)
+# dim is domain dimension (2 for 2D) for meshing
 def generate_mesh(args, template='geometry_2d.template_geo', dim=2):
-    '''Modify template according args and make gmsh generate the mesh'''
-    assert os.path.exists(template)
-    args = args.copy()
+    '''Modify template according to args (geom_params) and make gmsh generate the mesh'''
 
-    with open(template, 'r') as f: old = f.readlines()
+    assert os.path.exists(template)  # Raise an error if no template
+    args = args.copy()  # Create a copy of the dict as we will be popping pairs
 
-    # Chop the file to replace the jet positions
-    split = list(map(lambda s: s.startswith('DefineConstant'), old)).index(True)
+    with open(template, 'r') as f: old = f.readlines()  # Read template and save each line as an item of the list 'old''
 
-    jet_positions = deg2rad(list(map(float, args.pop('jet_positions'))))
-    jet_positions = 'jet_positions[] = {%s};\n' % (', '.join(list(map(str, jet_positions))))
-    body = ''.join([jet_positions] + old[split:])
+    # Lambda defines an anonymous function --> lambda arguments : expression
+    # .startswith() method returns True if a string starts with the specified prefix
+    # map(function, iterable) returns a list of the outputs of applying the function to each element of the iterable
+    # .index() returns the index of an element in a list
+    split = list(map(lambda s: s.startswith('DefineConstant'), old)).index(True)  # --> Return line number of DefineConstant
 
-    output = args.pop('output')
+    body = ''.join(old[split:])  # generate body for .geo
 
+    output = args.pop('output')  # -> output = 'mesh/turek_2d.geo'
+
+    # os.path.splitext() splits the path name into a pair root , ext
     if not output:
         output = template
-    assert os.path.splitext(output)[1] == '.geo'
+    assert os.path.splitext(output)[1] == '.geo'  # raise error if output doesnt have .geo extension
 
-    with open(output, 'w') as f: f.write(body)
+    with open(output, 'w') as f: f.write(body)  # write body to target ('output') .geo file
 
-    args['jet_width'] = deg2rad(args['jet_width'])
+    scale = args.pop('clscale')  # Get mesh size scaling ratio
 
-    scale = args.pop('clscale')
+    cmd = 'gmsh -0 %s ' % output  # Create cmd string to output unrolled geometry
 
-    cmd = 'gmsh -0 %s ' % output
-
-    list_geometric_parameters = ['width', 'jet_radius', 'jet_width', 'box_size', 'length',
-                                 'bottom_distance', 'cylinder_size', 'front_distance',
-                                 'coarse_distance', 'coarse_size']
+    list_geometric_parameters = ['jets_toggle', 'jet_width', 'height_cylinder', 'ar', 'cylinder_y_shift',
+                                 'x_upstream', 'x_downstream', 'height_domain',
+                                 'mesh_size_cylinder', 'mesh_size_medium', 'mesh_size_coarse',
+                                 'coarse_y_distance_top_bot', 'coarse_x_distance_left_from_LE']
 
     constants = " "
 
+    # Create cmd string to set params of DefineConstants
     for crrt_param in list_geometric_parameters:
         constants = constants + " -setnumber " + crrt_param + " " + str(args[crrt_param])
 
-    # Unrolled model
-    subprocess.call(cmd + constants, shell=True)
+    # Create unrolled model with the geometry_params set
+    subprocess.call(cmd + constants, shell=True)  # run the command to create unrolled
 
+    # Assert that 'mesh/turek_2d.geo'_unrolled exists
     unrolled = '_'.join([output, 'unrolled'])
     assert os.path.exists(unrolled)
 
     return subprocess.call(['gmsh -%d -clscale %g %s' % (dim, scale, unrolled)], shell=True)
+    # generate 2d mesh --> turek_2d.msh
+    # -clscale <float> : Set global mesh element size scaling factor
+    # -2: Perform 2D mesh generation, then exit
 
 # -------------------------------------------------------------------
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # This is only run when this file is executed as a script, not when imported
     import argparse, sys, petsc4py
     from math import pi
 
-    parser = argparse.ArgumentParser(description='Generate msh file from GMSH',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # The argparse module makes it easy to write user-friendly command-line interfaces. The program defines what arguments it requires, and argparse will figure out how to parse those out of sys.argv.
+    # generate argument help output for when "python generate_mesh.py -help" is called from the command line:
+
+    parser = argparse.ArgumentParser(description='Generate msh file from GMSH',  # Text to display before the argument help
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter) # adds information about default values to each of the argument help messages
     # Optional output geo file
     parser.add_argument('-output', default='', type=str, help='A geofile for writing out geometry')
-    # Geometry
-    parser.add_argument('-length', default=200, type=float,
-                        help='Channel length')
-    parser.add_argument('-front_distance', default=40, type=float,
-                        help='Cylinder center distance to inlet')
 
-    parser.add_argument('-bottom_distance', default=40, type=float,
-                        help='Cylinder center distance from bottom wall')
-    parser.add_argument('-jet_radius', default=10, type=float,
-                        help='Cylinder radius')
-    parser.add_argument('-width', default=80, type=float,
-                        help='Channel width')
-    parser.add_argument('-cylinder_size', default=0.25, type=float,
-                        help='Mesh size on cylinder')
-    parser.add_argument('-box_size', default=5, type=float,
-                        help='Mesh size on wall')
-    # Jet perameters
-    parser.add_argument('-jet_positions', nargs='+', default=[0, 60, 120, 180, 240, 300],
-                        help='Angles of jet center points')
-    parser.add_argument('-jet_width', default=10, type=float,
-                        help='Jet width in degrees')
+    # Geometry
+    parser.add_argument('-jets_toggle', default=1, type=bool,
+                        help='toggle Jets --> 0 : No jets, 1: Yes jets')
+    parser.add_argument('-jet_width', default=0.1, type=float,
+                        help='Jet Width')
+    parser.add_argument('-height_cylinder', default=40, type=float,
+                        help='Cylinder Height')
+    parser.add_argument('-ar', default=1, type=float,
+                        help='Cylinder Aspect Ratio')
+    parser.add_argument('-cylinder_y_shift', default=80, type=float,
+                        help='Cylinder Center Shift from Centerline, Positive UP')
+    parser.add_argument('-x_upstream', default=0.25, type=float,
+                        help='Domain Upstream Length (from left-most rect point)')
+    parser.add_argument('-x_downstream', default=5, type=float,
+                        help='Domain Downstream Length (from right-most rect point)')
+    parser.add_argument('-height_domain', nargs='+', default=[0, 60, 120, 180, 240, 300],
+                        help='Domain Height')
+    parser.add_argument('-mesh_size_cylinder', default=0.005, type=float,
+                        help='Mesh Size on Cylinder Walls')
+    parser.add_argument('-mesh_size_coarse', default=1, type=float,
+                        help='Mesh Size on boundaries outside wake')
+    parser.add_argument('-mesh_size_medium', default=0.2, type=float,
+                        help='Medium mesh size (at boundary where coarsening starts')
+    parser.add_argument('-coarse_y_distance_top_bot', default=4, type=float,
+                        help='y-distance from center where mesh coarsening starts')
+    parser.add_argument('-coarse_x_distance_left_from_LE', default=2, type=float,
+                        help='x-distance from upstream face where mesh coarsening starts')
 
     # Refine geometry
     parser.add_argument('-clscale', default=1, type=float,
