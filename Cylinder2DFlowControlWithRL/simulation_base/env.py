@@ -35,7 +35,7 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
         os.mkdir('mesh')
 
     geometry_params = {'output': '.'.join([root, 'geo']),  # mesh/turek_2d.geo // relative output path of geometry file according to geo params
-                    'template': '../rectangle_2d.template_geo',  # relative path of geometry file template
+                    'template': '../geometry_2d.template_geo',  # relative path of geometry file template
                     'clscale': 1,  # mesh size scaling ratio (all mesh characteristic lenghts of geometry file scaled by this factor)
                     'remesh': remesh,  # remesh toggle (from resume_env args)
                     'jets_toggle': 1,  # toggle Jets --> 0 : No jets, 1: Yes jets
