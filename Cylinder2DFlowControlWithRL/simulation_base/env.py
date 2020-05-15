@@ -8,6 +8,8 @@ cwd = os.getcwd()
 sys.path.append(cwd + "/../")
 
 from Env2DCylinder import Env2DCylinder
+from probe_positions import probe_positions
+
 import numpy as np
 from dolfin import Expression
 #from printind.printind_function import printi, printiv
@@ -60,57 +62,12 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
 
     solver_params = {'dt': dt}
 
+    # Define probes positions
+    probe_distribution = {'distribution_type': 'rabault151',
+                          'probes_at_jets': False,  # Whether to use probes at jets or not (for distributions other than 'rabault151'
+                          'n_base': 8}  # Number of probes at cylinder base if 'base' distribution is used
 
-    ## Define probes positions
-
-    list_position_probes = []  # Initialise list of (x,y) np arrays with positions coordinates
-
-    # Obtain relevant quantities
-    height_cylinder = geometry_params['height_cylinder']
-    ar = geometry_params['ar']
-    length_cylinder = ar * height_cylinder
-
-    # The 9 'columns' of 7 probes downstream of the cylinder
-    positions_probes_x_dist_from_right_side = [0.25, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
-    positions_probes_for_grid_x = [length_cylinder/2 + x for x in positions_probes_x_dist_from_right_side]
-    positions_probes_for_grid_y = [-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5]
-
-    for crrt_x in positions_probes_for_grid_x:
-        for crrt_y in positions_probes_for_grid_y:
-            list_position_probes.append(np.array([crrt_x, crrt_y]))  # Append (x,y) pairs np array
-
-    # The 4 'columns' of 4 probes on top and bottom of the cylinder
-    positions_probes_for_grid_x = [-length_cylinder / 4, 0.0, length_cylinder / 4, length_cylinder / 2]
-    positions_probes_for_grid_y = [-1.5, -1, 1, 1.5]
-
-    for crrt_x in positions_probes_for_grid_x:
-        for crrt_y in positions_probes_for_grid_y:
-            list_position_probes.append(np.array([crrt_x, crrt_y]))  # Append (x,y) pairs np array
-
-    # Two rectangles of probes around body of 36 probes each (for now, 10 probes on each side --> 36 total as corners are shared)
-    # TODO: Make the distribution even as AR changes (scalable)
-
-    for offset in [0.2, 0.4]:
-        dist_probes_x = (length_cylinder + offset * 2) / 9  # Dist between probes on top and bottom sides of periferic
-        dist_probes_y = (height_cylinder + offset * 2) / 9  # Dist between probes on left and right sides of periferic
-        left_side_periferic_x = -length_cylinder / 2 - offset  # x coord of left side of periferic
-        bot_side_periferic_y = -height_cylinder / 2 - offset  # y coord of bot side of periferic
-
-        # Define top and bot sides probes
-        positions_probes_for_grid_x = [left_side_periferic_x + dist_probes_x * i for i in range(10)]
-        positions_probes_for_grid_y = [bot_side_periferic_y, height_cylinder / 2 + offset]
-
-        for crrt_x in positions_probes_for_grid_x:
-            for crrt_y in positions_probes_for_grid_y:
-                list_position_probes.append(np.array([crrt_x, crrt_y]))  # Append (x,y) pair array
-
-        # Define left and right probes
-        positions_probes_for_grid_x = [left_side_periferic_x, length_cylinder / 2 + offset]
-        positions_probes_for_grid_y = [bot_side_periferic_y + dist_probes_y * i for i in range(1,9)]
-
-        for crrt_x in positions_probes_for_grid_x:
-            for crrt_y in positions_probes_for_grid_y:
-                list_position_probes.append(np.array([crrt_x, crrt_y]))  # Append (x,y) pair array
+    list_position_probes = probe_positions(probe_distribution, geometry_params)
 
     output_params = {'locations': list_position_probes,  # List of (x,y) np arrays with probe positions
                      'probe_type': 'pressure'  # Set quantity measured by probes (pressure/velocity)

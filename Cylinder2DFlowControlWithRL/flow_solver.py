@@ -95,7 +95,7 @@ class FlowSolver(object):
         length_cylinder = geometry_params['height_cylinder'] * geometry_params['ar']
 
         bcu_jet = []
-        jet_tags = range(cylinder_noslip_tag + 1, cylinder_noslip_tag + 1 + 2)  # 5 and 6 for 2 jets
+        jet_tags = list(range(cylinder_noslip_tag + 1, cylinder_noslip_tag + 1 + 2))  # 5 and 6 for 2 jets
 
         jets = [Expression(('(-4/(width*width))*Q*(x[0]-length_cylinder/2)*(x[0]-length_cylinder/2+width)', '0'),  # top jet
                            width=width, length_cylinder=length_cylinder, Q=0, degree=1),

@@ -604,9 +604,9 @@ class Env2DCylinder(Environment):
                                           self.solver_step,
                                           self.history_parameters["recirc_area"].get()[-1],
                                           self.history_parameters["drag"].get()[-1],
-                                          self.history_parameters["lift"].get()[-1]],
+                                          self.history_parameters["lift"].get()[-1],
                                           self.history_parameters["jet_0"].get()[-1],
-                                          self.history_parameters["jet_1"].get()[-1])
+                                          self.history_parameters["jet_1"].get()[-1]])
             else:
                 with open("saved_models/"+name, "a") as csv_file:
                     spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
@@ -615,9 +615,9 @@ class Env2DCylinder(Environment):
                                           self.solver_step,
                                           self.history_parameters["recirc_area"].get()[-1],
                                           self.history_parameters["drag"].get()[-1],
-                                          self.history_parameters["lift"].get()[-1]],
+                                          self.history_parameters["lift"].get()[-1],
                                           self.history_parameters["jet_0"].get()[-1],
-                                          self.history_parameters["jet_1"].get()[-1])
+                                          self.history_parameters["jet_1"].get()[-1]])
 
         if("single_run" in self.inspection_params and self.inspection_params["single_run"] == True):
             # if ("dump" in self.inspection_params and self.inspection_params["dump"] > 10000):
