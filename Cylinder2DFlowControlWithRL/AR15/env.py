@@ -43,7 +43,7 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
                     'jets_toggle': 1,  # toggle Jets --> 0 : No jets, 1: Yes jets
                     'jet_width': 0.1,  # Jet Width
                     'height_cylinder': 1,  # Cylinder Height
-                    'ar': 1.0,  # Cylinder Aspect Ratio
+                    'ar': 1.5,  # Cylinder Aspect Ratio
                     'cylinder_y_shift': 0,  # Cylinder Center Shift from Centreline, Positive UP
                     'x_upstream': 20,  # Domain Upstream Length (from left-most rect point)
                     'x_downstream': 26,  # Domain Downstream Length (from right-most rect point)
@@ -52,14 +52,9 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
                     'mesh_size_medium': 0.3,  # Medium mesh size (at boundary where coarsening starts)
                     'mesh_size_coarse': 1,  # Coarse mesh Size Close to Domain boundaries outside wake
                     'coarse_y_distance_top_bot': 4,  # y-distance from center where mesh coarsening starts
-                    'coarse_x_distance_left_from_LE': 2.5,  # x-distance from upstream face where mesh coarsening starts
-                    'AoA': 10}  # Freestream angle of attack
+                    'coarse_x_distance_left_from_LE': 2.5}  # x-distance from upstream face where mesh coarsening starts
 
-    # Define the inflow Uinf components
-    u_inf = math.cos(geometry_params['AoA'])
-    v_inf = math.sin(geometry_params['AoA'])
-
-    profile = Expression(('u_inf', 'v_inf'), u_inf=u_inf, v_inf=v_inf, degree=2)  # Inflow profile (defined as FEniCS expression)
+    profile = Expression(('1', '0'), degree=2)  # Inflow profile (defined as FEniCS expression)
 
     flow_params = {'mu': 1E-2,  # Dynamic viscosity. This in turn defines the Reynolds number: Re = U * D / mu
                   'rho': 1,  # Density
