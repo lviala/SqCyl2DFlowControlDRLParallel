@@ -53,11 +53,12 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
                     'mesh_size_coarse': 1,  # Coarse mesh Size Close to Domain boundaries outside wake
                     'coarse_y_distance_top_bot': 4,  # y-distance from center where mesh coarsening starts
                     'coarse_x_distance_left_from_LE': 2.5,  # x-distance from upstream face where mesh coarsening starts
-                    'AoA': 10}  # Freestream angle of attack
+                    'AoA': 30}  # Freestream angle of attack in degrees
 
     # Define the inflow Uinf components
-    u_inf = math.cos(geometry_params['AoA'])
-    v_inf = math.sin(geometry_params['AoA'])
+    AoA_rad = math.radians(geometry_params['AoA'])
+    u_inf = math.cos(AoA_rad)
+    v_inf = math.sin(AoA_rad)
 
     profile = Expression(('u_inf', 'v_inf'), u_inf=u_inf, v_inf=v_inf, degree=2)  # Inflow profile (defined as FEniCS expression)
 

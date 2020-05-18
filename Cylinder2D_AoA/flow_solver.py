@@ -81,10 +81,9 @@ class FlowSolver(object):
         L3 = dot(u_, v)*dx - dt*dot(nabla_grad(p_ - p_n), v)*dx
 
         # Define the velocity components for the top and bottoms BCS
-        AoA = geometry_params['AoA']
-        u_wall = math.cos(AoA)
-        v_wall = math.sin(AoA)
-
+        AoA_rad = math.radians(geometry_params['AoA'])
+        u_wall = math.cos(AoA_rad)
+        v_wall = math.sin(AoA_rad)
 
         inflow_profile = flow_params['inflow_profile']
         # Define boundary conditions, first those that are constant in time
