@@ -26,7 +26,7 @@ host = args["host"]
 if host == 'None':
     host = socket.gethostname()
 
-example_environment = resume_env(plot=False, step=100, dump_CL=100, dump_debug=100, dump_vtu=100)
+example_environment = resume_env(plot=False, dump_CL=100, dump_debug=100, dump_vtu=100)
 
 use_best_model = True
 

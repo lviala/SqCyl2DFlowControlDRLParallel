@@ -99,9 +99,9 @@ class FlowSolver(object):
         bcu_jet = []
         jet_tags = list(range(cylinder_noslip_tag + 1, cylinder_noslip_tag + 1 + 2))  # 5 and 6 for 2 jets
 
-        jets = [Expression(('(-4/(width*width))*Q*(x[0]-length_cylinder/2)*(x[0]-length_cylinder/2+width)', '0'),  # top jet
+        jets = [Expression(('0', '(-4/(width*width))*Q*(x[0]-length_cylinder/2)*(x[0]-length_cylinder/2+width)'),  # top jet
                            width=width, length_cylinder=length_cylinder, Q=0, degree=1),
-                Expression(('(4/(width*width))*Q*(x[0]-length_cylinder/2)*(x[0]-length_cylinder/2+width)', '0'),  # bot jet
+                Expression(('0', '(4/(width*width))*Q*(x[0]-length_cylinder/2)*(x[0]-length_cylinder/2+width)'),  # bot jet
                            width=width, length_cylinder=length_cylinder, Q=0, degree=1)]
         # If this doesnt work, maybe it has to do with how dolfin define the origin for Expressions
         # Maybe try x[1] <= 0 ? - : +
