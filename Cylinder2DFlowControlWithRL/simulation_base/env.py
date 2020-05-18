@@ -18,18 +18,20 @@ import math
 import os
 cwd = os.getcwd()
 
-nb_actuations = 80 # Number of actions (NN actuations) taken per episode (Number of action intervals)
+nb_actuations = 60 # Number of actions (NN actuations) taken per episode (Number of action intervals)
 
-def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec area) during training
-               step=50, # If verbose > 0, every "step" steps print (step,Qs,probe values, drag, lift, recArea) to screen (see def output_data)
-               dump=100, # If not False, we generate output.csv with episode averages and
+def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec area) during training
+               dump_vtu=100,  # If not False, create vtu files of area, velocity, pressure, every 'dump_vtu' steps
+               dump_debug=100,  # If not False, output step info of ep,step,rec_area,L,D,jets Q* to saved_models/debug.csv, every 'dump_debug' steps
+               dump_CL=100,  # If not False, output step info of ep,step,rec_area,L,D,jets Q* to command line, every 'dump_CL' steps
                remesh=False,
                random_start=False,
                single_run=False):
+
     # ---------------------------------------------------------------------------------
     # the configuration version number 1
 
-    simulation_duration = 40.0 #duree en secondes de la simulation
+    simulation_duration = 30.0 #duree en secondes de la simulation
     dt = 0.004
 
     root = 'mesh/turek_2d'  # Root of geometry file path
@@ -81,8 +83,9 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
                         "random_start": random_start}
 
     inspection_params = {"plot": plot,
-                        "step": step,
-                        "dump": dump,
+                        "dump_vtu": dump_vtu,
+                        "dump_debug": dump_debug,
+                        "dump_CL": dump_CL,
                         "range_pressure_plot": [-2.0, 1],   # ylim for pressure dynamic plot
                         "range_drag_plot": [-0.175, -0.13],  # ylim for drag dynamic plot
                         "range_lift_plot": [-0.2, +0.2],  # ylim for lift dynamic plot

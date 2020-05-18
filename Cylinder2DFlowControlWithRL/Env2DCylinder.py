@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Environment seen by the RL agent. It is the main class of the repo.
 """
@@ -92,17 +93,17 @@ class Env2DCylinder(Environment):
         self.output_params = output_params
         self.optimization_params = optimization_params
         self.inspection_params = inspection_params
+        self.size_time_state = size_time_state
         self.verbose = verbose
         self.n_iter_make_ready = n_iter_make_ready
         self.size_history = size_history
         self.reward_function = reward_function
-        self.size_time_state = size_time_state
         self.number_steps_execution = number_steps_execution
 
         self.simu_name = simu_name
 
 
-        # Initialise arrays of episode data + episode number. If previous output.csv exists, take current episode as last in there
+        # If previous output.csv (epidosde avgs) exists, obtain its last row to get last simulated episode number
         name="output.csv"
         last_row = None
         if(os.path.exists("saved_models/"+name)):
@@ -111,11 +112,13 @@ class Env2DCylinder(Environment):
                     last_row = row
                     break
         if(not last_row is None):
-            self.episode_number = int(last_row[0])
-            self.last_episode_number = int(last_row[0])
+            self.episode_number = int(last_row[0])  # Current episode. Updates once its avgs have been recorded
+            self.last_episode_number = int(last_row[0])  # Current episode. Updates when a new episode starts (upon reset)
         else:
             self.last_episode_number = 0
             self.episode_number = 0
+
+        # Initialise arrays that wil, store episode data
         self.episode_drags = np.array([])
         self.episode_areas = np.array([])
         self.episode_lifts = np.array([])
@@ -127,11 +130,18 @@ class Env2DCylinder(Environment):
         print("--- done buffers initialisation ---")
 
     def start_class(self):
-        self.solver_step = 0
-        self.accumulated_drag = 0
+        '''
+        Initialise attributes needed by the Environment object:
+        Initialise history buffers, remesh if necessary, load initialization quantities if not remesh, create flow solver
+        object, initialise probes, make converged flow if necessary, simulate to random position if random_start,
+        fill probes buffer if no. probes changed wrt last remesh
+        :return:
+        '''
+        self.solver_step = 0  # Numerical step
+        self.accumulated_drag = 0  # Sum of step drags so far
         self.accumulated_lift = 0
 
-        self.initialized_output = False
+        self.initialized_vtu= False
 
         self.resetted_number_probes = False
 
@@ -160,7 +170,7 @@ class Env2DCylinder(Environment):
         self.history_parameters["recirc_area"] = RingBuffer(self.size_history)
 
         # ------------------------------------------------------------------------
-        # remesh if necessary
+        # Remesh if necessary
         h5_file = '.'.join([self.path_root, 'h5'])  # mesh/turek_2d.h5
         msh_file = '.'.join([self.path_root, 'msh'])  # mesh/turek_2d.msh
         self.geometry_params['mesh'] = h5_file
@@ -185,22 +195,28 @@ class Env2DCylinder(Environment):
             assert os.path.exists(h5_file)
 
         # ------------------------------------------------------------------------
-        # if necessary, load initialization fields
+        # If no remesh, load initialization fields and buffers
+
         if self.n_iter_make_ready is None:
             if self.verbose > 0:
                 print("Load initial flow state")
 
+            # Load initial fields
             self.flow_params['u_init'] = 'mesh/u_init.xdmf'
             self.flow_params['p_init'] = 'mesh/p_init.xdmf'
 
             if self.verbose > 0:
                 print("Load buffer history")
 
+            # Load ring buffers
             with open('mesh/dict_history_parameters.pkl', 'rb') as f:
                 self.history_parameters = pickle.load(f)
 
+            # Check everything is good to go
+
             if not "number_of_probes" in self.history_parameters:
                 self.history_parameters["number_of_probes"] = 0
+                print("Warning!! The number of probes was not set in the loaded hdf5 file")
 
             if not "number_of_jets" in self.history_parameters:
                 self.history_parameters["number_of_jets"] = 2
@@ -208,6 +224,10 @@ class Env2DCylinder(Environment):
 
             if not "lift" in self.history_parameters:
                 self.history_parameters["lift"] = RingBuffer(self.size_history)
+                print("Warning!! No lift history found in the loaded hdf5 file")
+
+            if not "drag" in self.history_parameters:
+                self.history_parameters["drag"] = RingBuffer(self.size_history)
                 print("Warning!! No lift history found in the loaded hdf5 file")
 
             if not "recirc_area" in self.history_parameters:
@@ -262,7 +282,7 @@ class Env2DCylinder(Environment):
         if self.n_iter_make_ready is not None:
             self.u_, self.p_ = self.flow.evolve(self.Qs)
             path=''
-            if "dump" in self.inspection_params:
+            if "dump_vtu" in self.inspection_params:
                 path = 'results/area_out.pvd'
             self.area_probe = RecirculationAreaProbe(self.u_, 0, store_path=path)
             if self.verbose > 0:
@@ -276,13 +296,12 @@ class Env2DCylinder(Environment):
                 self.lift = self.lift_probe.sample(self.u_, self.p_)
                 self.recirc_area = self.area_probe.sample(self.u_, self.p_)
 
-                self.write_history_parameters()
-                self.visual_inspection()
-                self.output_data()
+                self.write_history_parameters()  # Add new step data to history buffers
+                self.visual_inspection()  # Create dynamic plots, show step data in command line and save it to saved_models/debug.csv
+                self.output_data()  # Extend arrays of episode qtys, generate vtu files for area, u and p
 
                 self.solver_step += 1
 
-        if self.n_iter_make_ready is not None:
             encoding = XDMFFile.Encoding.HDF5
             mesh = convert(msh_file, h5_file)
             comm = mesh.mpi_comm()
@@ -296,18 +315,18 @@ class Env2DCylinder(Environment):
                 pickle.dump(self.history_parameters, f, pickle.HIGHEST_PROTOCOL)
 
         # ----------------------------------------------------------------------
-        # if reading from disk, show to check everything ok
+        # if reading from disk (no remesh), show to check everything ok
         if self.n_iter_make_ready is None:
             # If random_start == True, let's start in a random position of the vortex shedding
             if self.optimization_params["random_start"]:
-                rd_advancement = np.random.randint(1712)
+                rd_advancement = np.random.randint(1712)  # 1712 is the number of steps of a shedding period. Needs to be hardcoded
                 for j in range(rd_advancement):
                     self.flow.evolve(self.Qs)
                 print("Simulated {} iterations before starting the control".format(rd_advancement))
 
-            self.u_, self.p_ = self.flow.evolve(self.Qs)
+            self.u_, self.p_ = self.flow.evolve(self.Qs)  # Initial step with Qs = 0
             path=''
-            if "dump" in self.inspection_params:
+            if "dump_vtu" in self.inspection_params:
                 path = 'results/area_out.pvd'
             self.area_probe = RecirculationAreaProbe(self.u_, 0, store_path=path)
 
@@ -323,6 +342,7 @@ class Env2DCylinder(Environment):
         if self.resetted_number_probes:
             print("Need to fill again the buffer; modified number of probes")
 
+            # TODO: Execute runs for 1 action step, so we would be running for (T/Nb)*size_history. While it should be just for size_history.  In practice, remesh if probes change
             for _ in range(self.size_history):
                 self.execute()
 
@@ -332,6 +352,10 @@ class Env2DCylinder(Environment):
         self.ready_to_use = True
 
     def write_history_parameters(self):
+        '''
+        Add data of last step to history buffers
+        :return:
+        '''
         for crrt_jet in range(2):
             self.history_parameters["jet_{}".format(crrt_jet)].extend(self.Qs[crrt_jet])
 
@@ -340,7 +364,7 @@ class Env2DCylinder(Environment):
                 self.history_parameters["probe_{}".format(crrt_probe)].extend(self.probes_values[crrt_probe])
         elif self.output_params["probe_type"] == 'velocity':
             for crrt_probe in range(len(self.output_params["locations"])):
-                self.history_parameters["probe_{}_u".format(crrt_probe)].extend(self.probes_values[2 * crrt_probe])
+                self.history_parameters["probe_{}_u".format(crrt_probe)].extend(self.probes_values[2 * crrt_probe])  # probes values are ordered in u,v pairs
                 self.history_parameters["probe_{}_v".format(crrt_probe)].extend(self.probes_values[2 * crrt_probe + 1])
 
         self.history_parameters["drag"].extend(np.array(self.drag))
@@ -444,14 +468,15 @@ class Env2DCylinder(Environment):
         plt.show()
         plt.pause(2.0)
 
-    def visual_inspection(self):  # Dynamic plotting AND command line information during runs
+    def visual_inspection(self):
         '''
-        Create dynamic plots, show output data to command line and save it to saved_models/debug.csv (or to
+        Create dynamic plots, show step data in command line and save it to saved_models/debug.csv (or to
         saved_models/test_strategy.csv if single run)
         '''
         total_number_subplots = 5
         crrt_subplot = 1
 
+        # If plot =! False, initialise dynamic plotting if not done before
         if(not self.initialized_visualization and self.inspection_params["plot"] != False):
             plt.ion()  # Turn the interactive plot mode on
             plt.subplots(total_number_subplots, 1)
@@ -581,16 +606,18 @@ class Env2DCylinder(Environment):
                 plt.draw()
                 plt.pause(0.5)
 
-        if self.solver_step % self.inspection_params["dump"] == 0 and self.inspection_params["dump"] < 10000:
+        if (self.inspection_params["dump_CL"] != False and self.solver_step % self.inspection_params["dump_CL"] == 0 and self.inspection_params["dump_CL"] < 10000):
             # Display information in command line
-            print("%s | Ep N: %4d, step: %4d, Rec Area: %.4f, drag: %.4f, lift: %.4f, jet_0: %.4f"%(self.simu_name,
+            print("%s | Ep N: %4d, step: %4d, Rec Area: %.4f, drag: %.4f, lift: %.4f, jet_0: %.4f, jet_1: %.4f"%(self.simu_name,
             self.episode_number,
             self.solver_step,
             self.history_parameters["recirc_area"].get()[-1],
             self.history_parameters["drag"].get()[-1],
             self.history_parameters["lift"].get()[-1],
-            self.history_parameters["jet_0"].get()[-1]))
+            self.history_parameters["jet_0"].get()[-1],
+            self.history_parameters["jet_1"].get()[-1]))
 
+        if (self.inspection_params["dump_debug"] != False and self.solver_step % self.inspection_params["dump_debug"] == 0 and self.inspection_params["dump_debug"] < 10000):
             # Save everything that happens in a debug.csv file!
             name = "debug.csv"
             if(not os.path.exists("saved_models")):
@@ -649,73 +676,71 @@ class Env2DCylinder(Environment):
         Generate vtu files for area, u and p
         '''
 
-        if "dump" in self.inspection_params and self.inspection_params["dump"] < 10000:
-            modulo_base = self.inspection_params["dump"]
+        # Extend drag, lift and area histories
+        self.episode_drags = np.append(self.episode_drags, [self.history_parameters["drag"].get()[-1]])
+        self.episode_areas = np.append(self.episode_areas, [self.history_parameters["recirc_area"].get()[-1]])
+        self.episode_lifts = np.append(self.episode_lifts, [self.history_parameters["lift"].get()[-1]])
 
-            # Extend drag, lif and area histories
-            self.episode_drags = np.append(self.episode_drags, [self.history_parameters["drag"].get()[-1]])
-            self.episode_areas = np.append(self.episode_areas, [self.history_parameters["recirc_area"].get()[-1]])
-            self.episode_lifts = np.append(self.episode_lifts, [self.history_parameters["lift"].get()[-1]])
+        # If new episode (not single run), record avg qtys for last ep
+        if(self.last_episode_number != self.episode_number and "single_run" in self.inspection_params and self.inspection_params["single_run"] == False):
+            self.last_episode_number = self.episode_number  # Update last_episode_number, as no we will record the avgs for the last episode
+            # Find avgs for the 2nd half of each ep
+            avg_drag = np.average(self.episode_drags[len(self.episode_drags)//2:])
+            avg_area = np.average(self.episode_areas[len(self.episode_areas)//2:])
+            avg_lift = np.average(self.episode_lifts[len(self.episode_lifts)//2:])
+            name = "output.csv"
+            if(not os.path.exists("saved_models")):
+                os.mkdir("saved_models")
+            if(not os.path.exists("saved_models/"+name)):
+                with open("saved_models/"+name, "w") as csv_file:
+                    spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
+                    spam_writer.writerow(["Episode", "AvgDrag", "AvgLift", "AvgRecircArea"])
+                    spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
+            else:
+                with open("saved_models/"+name, "a") as csv_file:
+                    spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
+                    spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
+            # Empty the episode lists for the new episode
+            self.episode_drags = np.array([])
+            self.episode_areas = np.array([])
+            self.episode_lifts = np.array([])
 
-            # If new episode, record avg qtys for last ep
-            if(self.last_episode_number != self.episode_number and "single_run" in self.inspection_params and self.inspection_params["single_run"] == False):
-                self.last_episode_number = self.episode_number
-                # Find avgs for the 2nd half of each ep
-                avg_drag = np.average(self.episode_drags[len(self.episode_drags)//2:])
-                avg_area = np.average(self.episode_areas[len(self.episode_areas)//2:])
-                avg_lift = np.average(self.episode_lifts[len(self.episode_lifts)//2:])
-                name = "output.csv"
-                if(not os.path.exists("saved_models")):
-                    os.mkdir("saved_models")
-                if(not os.path.exists("saved_models/"+name)):
-                    with open("saved_models/"+name, "w") as csv_file:
-                        spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
-                        spam_writer.writerow(["Episode", "AvgDrag", "AvgLift", "AvgRecircArea"])
-                        spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
-                else:
-                    with open("saved_models/"+name, "a") as csv_file:
-                        spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
-                        spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
-                self.episode_drags = np.array([])
-                self.episode_areas = np.array([])
-                self.episode_lifts = np.array([])
+            if(os.path.exists("saved_models/output.csv")):
+                if(not os.path.exists("best_model")):
+                    shutil.copytree("saved_models", "best_model")
 
-                if(os.path.exists("saved_models/output.csv")):
-                    if(not os.path.exists("best_model")):
+                else :
+                    with open("saved_models/output.csv", 'r') as csvfile:
+                        data = csv.reader(csvfile, delimiter = ';')
+                        for row in data:
+                            lastrow = row
+                        last_iter_drag = lastrow[1]  # get avg drag of last episode
+
+                    with open("best_model/output.csv", 'r') as csvfile:
+                        data = csv.reader(csvfile, delimiter = ';')
+                        for row in data:
+                            lastrow = row
+                        best_iter_drag = lastrow[1]  # get avg drag of best episode in best_model/
+
+                    # If last episode model is better than current best model, we replace the best model
+                    if float(best_iter_drag) < float(last_iter_drag):
+                        print("best_model updated")
+                        if(os.path.exists("best_model")):
+                            shutil.rmtree("best_model")
                         shutil.copytree("saved_models", "best_model")
 
-                    else :
-                        with open("saved_models/output.csv", 'r') as csvfile:
-                            data = csv.reader(csvfile, delimiter = ';')
-                            for row in data:
-                                lastrow = row
-                            last_iter_drag = lastrow[1]  # get avg drag of last episode
+        if "dump_vtu" in self.inspection_params and self.inspection_params["dump_vtu"] < 10000 and self.solver_step % self.inspection_params["dump_vtu"] == 0:
 
-                        with open("best_model/output.csv", 'r') as csvfile:
-                            data = csv.reader(csvfile, delimiter = ';')
-                            for row in data:
-                                lastrow = row
-                            best_iter_drag = lastrow[1]  # get avg drag of best episode in best_model/
+            if not self.initialized_vtu:  # Initialize results .pvd output if not done already
+                self.u_out = File('results/u_out.pvd')
+                self.p_out = File('results/p_out.pvd')
+                self.initialized_vtu = True
 
-                        # If last episode model is better than current best model, we replace the best model
-                        if float(best_iter_drag) < float(last_iter_drag):
-                            print("best_model updated")
-                            if(os.path.exists("best_model")):
-                                shutil.rmtree("best_model")
-                            shutil.copytree("saved_models", "best_model")
-
-            if self.solver_step % modulo_base == 0:
-
-                if not self.initialized_output:  # Initialize results .pvd output if not done already
-                    self.u_out = File('results/u_out.pvd')
-                    self.p_out = File('results/p_out.pvd')
-                    self.initialized_output = True
-
-                # Generate vtu files for area, drag and lift
-                if(not self.area_probe is None):
-                    self.area_probe.dump(self.area_probe)
-                self.u_out << self.flow.u_
-                self.p_out << self.flow.p_
+            # Generate vtu files for area, drag and lift
+            if(not self.area_probe is None):
+                self.area_probe.dump(self.area_probe)
+            self.u_out << self.flow.u_
+            self.p_out << self.flow.p_
 
 
     def __str__(self):
@@ -755,12 +780,12 @@ class Env2DCylinder(Environment):
 
     def execute(self, actions=None):
         '''
-        Run solver for one action step, until next DRL state (For the flow solver this means to run for number_steps_execution)
+        Run solver for one action step, until next RL env state (For the flow solver this means to run for number_steps_execution)
         In this interval, control is made continuous between actions and net MFR = 0 is imposed
-        :param actions:
+        :param: actions
         :return: next state (probe values at end of action step)
                  terminal
-                 reward (- CD mean over action step + 0.2 * abs of CL mean over action step)
+                 reward (- CD (-) mean over action step + 0.2 * abs of CL mean over action step)
         '''
         action = actions
 
@@ -769,7 +794,7 @@ class Env2DCylinder(Environment):
 
         if action is None:
             if self.verbose > -1:
-                print("Careful, no action given. By default, no jet (Q=0)!")
+                print("Careful, no action given to execute(). By default, no jet (Q=0)!")
 
             nbr_jets = 2
             action = np.zeros((nbr_jets, ))
@@ -777,7 +802,7 @@ class Env2DCylinder(Environment):
         if self.verbose > 2:
             print(action)
             
-        self.previous_action = self.action
+        self.previous_action = self.action  # Store previous action before overwritting action attribute
         self.action = action
 
         # Run for one action step (several -number_steps_execution- numerical timesteps keeping action=const but changing control)
@@ -789,7 +814,7 @@ class Env2DCylinder(Environment):
                 # self.Qs += self.optimization_params["smooth_control"] * (np.array(action) - self.Qs)
 
                 # Linear interpolation in the control
-                self.Qs = np.array(self.previous_action) + (np.array(self.action) - np.array(self.previous_action)) / self.number_steps_execution * (crrt_control_nbr + 1)
+                self.Qs = np.array(self.previous_action) + (np.array(self.action) - np.array(self.previous_action)) * ((crrt_control_nbr + 1) / self.number_steps_execution)
             else:
                 self.Qs = np.transpose(np.array(action))
 
@@ -802,8 +827,8 @@ class Env2DCylinder(Environment):
             self.u_, self.p_ = self.flow.evolve(self.Qs)
 
             # Output flow data when relevant
-            self.visual_inspection()
-            self.output_data()
+            self.visual_inspection()  # Create dynamic plots, show step data in command line and save it to saved_models/debug.csv
+            self.output_data()  # Extend arrays of episode qtys, generate vtu files for area, u and p
 
             # We have done one solver step
             self.solver_step += 1
@@ -874,12 +899,12 @@ class Env2DCylinder(Environment):
             raise RuntimeError("Reward function {} not yet implemented".format(self.reward_function))
 
     def states(self):
-        """
-        Return the state space. Might include subdicts if multiple states are available simultaneously.
-
-        Returns: dict of state properties (shape and type).
-
-        """
+        '''
+        Returns the state space specification.
+        :return: dictionary of state descriptions with the following attributes:
+        type ("bool" / "int" / "float") – state data type (required)
+        shape (int > 0 / iter[int > 0]) – state shape (default: scalar)
+        '''
 
         if self.output_params["probe_type"] == 'pressure':
             return dict(type='float',
@@ -892,11 +917,13 @@ class Env2DCylinder(Environment):
                         )
 
     def actions(self):
-        """
-        Return the action space. Might include subdicts if multiple actions are available simultaneously.
-
-        Returns: dict of action properties (type, shape, min val, max val).
-        """
+        '''
+        Returns the action space specification.
+        :return: dictionary of action descriptions with the following attributes:
+        type ("bool" / "int" / "float") – action data type (required)
+        shape (int > 0 / iter[int > 0]) – action shape
+        min_value/max_value (float) – minimum/maximum action value
+        '''
 
         # NOTE: we could also have several levels of dict in dict, for example:
         # return { str(i): dict(continuous=True, min_value=0, max_value=1) for i in range(self.n + 1) }

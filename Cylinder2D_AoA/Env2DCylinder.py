@@ -72,7 +72,7 @@ class Env2DCylinder(Environment):
     """Environment for 2D flow simulation around a cylinder."""
 
     def __init__(self, path_root, geometry_params, flow_params, solver_params, output_params,
-                 optimization_params, inspection_params, n_iter_make_ready=None, verbose=0, size_history=2000,
+                 optimization_params, inspection_params, n_iter_make_ready=None, verbose=0, size_history=4000,
                  reward_function='plain_drag', size_time_state=50, number_steps_execution=1, simu_name="Simu"):
         """
 

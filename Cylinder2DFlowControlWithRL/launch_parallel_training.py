@@ -26,7 +26,7 @@ host = args["host"]
 if host == 'None':
     host = socket.gethostname()
 
-example_environment = resume_env(plot=False, step=100, dump=100)
+example_environment = resume_env(plot=False, step=100, dump_CL=100, dump_debug=100, dump_vtu=100)
 
 use_best_model = True
 
@@ -86,7 +86,7 @@ sys.path.append(cwd + evaluation_folder)
 # out_drag_file = open("avg_drag.txt", "w")
 
 runner.run(
-    num_episodes=400,
+    num_episodes=200,
     max_episode_timesteps=nb_actuations,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
     save_best_agent=use_best_model

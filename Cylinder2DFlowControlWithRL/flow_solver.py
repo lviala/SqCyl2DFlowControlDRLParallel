@@ -2,6 +2,8 @@ from jet_bcs import JetBCValue
 from dolfin import *
 import numpy as np
 
+import math
+
 # Solves FE problem (sets BCs,
 # There are three variational problems to be defined, one for each step in the IPCS scheme
 
