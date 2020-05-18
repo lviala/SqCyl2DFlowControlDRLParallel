@@ -300,7 +300,7 @@ class Env2DCylinder(Environment):
         if self.n_iter_make_ready is None:
             # If random_start == True, let's start in a random position of the vortex shedding
             if self.optimization_params["random_start"]:
-                rd_advancement = np.random.randint(650)
+                rd_advancement = np.random.randint(1712)
                 for j in range(rd_advancement):
                     self.flow.evolve(self.Qs)
                 print("Simulated {} iterations before starting the control".format(rd_advancement))

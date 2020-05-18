@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def probe_positions(probe_distribution, probes_at_jets, geometry_params):
+def probe_positions(probe_distribution, geometry_params):
     '''
     Function that returns the list of np arrays with probe position coordinate pairs for a given distribution.
     Distributions implemented:

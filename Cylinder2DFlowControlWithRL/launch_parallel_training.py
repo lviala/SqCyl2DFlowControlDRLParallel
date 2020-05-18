@@ -46,30 +46,38 @@ network = [dict(type='dense', size=512), dict(type='dense', size=512)]
 
 agent = Agent.create(
     # Agent + Environment
-    agent='ppo', environment=example_environment, max_episode_timesteps=nb_actuations,
+    agent='ppo',  # Agent specification
+    environment=example_environment,  # Environment object
+    max_episode_timesteps=nb_actuations,  # Upper bound for number of timesteps (action steps) per episode
     # TODO: nb_actuations could be specified by Environment.max_episode_timesteps() if it makes sense...
     # Network
-    network=network,
+    network=network,  # Policy NN specification
     # Optimization
-    batch_size=20, learning_rate=1e-3, subsampling_fraction=0.2, optimization_steps=25,
+    batch_size=20,  # Number of episodes per update batch
+    learning_rate=1e-3,  # Optimizer learning rate
+    subsampling_fraction=0.2,  # Fraction of batch timesteps to subsample
+    optimization_steps=25,
     # Reward estimation
-    likelihood_ratio_clipping=0.2, estimate_terminal=True,  # ???
+    likelihood_ratio_clipping=0.2, # The epsilon of the ppo CLI objective
+    estimate_terminal=True,  # Whether to estimate the value of terminal states
     # TODO: gae_lambda=0.97 doesn't currently exist
     # Critic
-    critic_network=network,
+    critic_network=network,  # Critic NN specification
     critic_optimizer=dict(
         type='multi_step', num_steps=5,
         optimizer=dict(type='adam', learning_rate=1e-3)
     ),
     # Regularization
-    entropy_regularization=0.01,
+    entropy_regularization=0.01,  # To discourage policy from being too 'certain'
     # TensorFlow etc
-    parallel_interactions=number_servers,
-    saver=dict(directory=os.path.join(os.getcwd(), 'saver_data')),
+    parallel_interactions=number_servers,  # Maximum number of parallel interactions to support
+    saver=dict(directory=os.path.join(os.getcwd(), 'saver_data')),  # TensorFlow saver configuration for periodic implicit saving
 )
 
 runner = ParallelRunner(
-    agent=agent, environments=environments, evaluation_environment=evaluation_environment
+    agent=agent,
+    environments=environments,  # List of environment objects from which we gather experience
+    evaluation_environment=evaluation_environment   # Evaluation environment object
 )
 
 cwd = os.getcwd()
@@ -78,7 +86,9 @@ sys.path.append(cwd + evaluation_folder)
 # out_drag_file = open("avg_drag.txt", "w")
 
 runner.run(
-    num_episodes=400, max_episode_timesteps=nb_actuations, sync_episodes=True,
+    num_episodes=400,
+    max_episode_timesteps=nb_actuations,
+    sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
     save_best_agent=use_best_model
 )
 # out_drag_file.close()
