@@ -37,7 +37,7 @@ agent = Agent.create(
     entropy_regularization=0.01,
     # TensorFlow etc
     parallel_interactions=1,
-    saver=saver_restore,
+    saver=saver_restore,  # Restore agent
 )
 
 # restore_directory = './saver_data/'

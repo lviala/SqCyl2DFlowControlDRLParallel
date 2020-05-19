@@ -5,6 +5,7 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+# if -h, output help
 if [ "$1" == "-h" ]; then
     echo "A bash script to launch the parallel training automatically:"
     echo "- create a new tmux session"
@@ -24,9 +25,8 @@ else
     fi
 fi
 
-# check that the tmux session name is free
+# check that the tmux session name is free, otherwise, give warning
 found_session=$(tmux ls | grep $1 | wc -l)
-
 if [ $found_session != 0 ]; then
     echo "Collision in session name!"
     echo "running:    tmux ls | grep $1"
@@ -60,15 +60,20 @@ tmux split-window -h
 tmux split-window -v
 tmux split-window -t 0 -v
 
-# launch everything
+
+# launch everything:
+
+# htop to monitor processes
 tmux send-keys -t 1 "htop" C-m
 
+# launch servers
 echo "Launching the servers. This takes a few seconds..."
 tmux send-keys -t 3 "python3 launch_servers.py -p $2 -n $3"  C-m
 let "n_sec_sleep = 10 * $3"
 echo "Wait $n_sec_sleep secs for servers to start..."
 sleep $n_sec_sleep
 
+# launch training
 echo "Launched training!"
 tmux send-keys -t 2 "python3 launch_parallel_training.py -p $2 -n $3"  C-m
 

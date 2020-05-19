@@ -20,14 +20,15 @@ args = vars(ap.parse_args())
 port = args["port"]
 host = args["host"]
 
+# We are within one of the env folders. read rank.txt to know which one
 with open('rank', 'r') as fh:
     rank_line = fh.readline()
-    rank = int(rank_line)
+    rank = int(rank_line)  # get rank number
     print("This is the simulation of rank {}".format(rank))
 
+# If no host specified, use local
 if host == 'None':
     host = socket.gethostname()
-
 
 def check_free_port(host, port, verbose=True):
     """Check if a given port is available."""
@@ -52,15 +53,13 @@ def launch_server(host, port):
     # to avoid cluttering the terminal...
     if rank == 0:
         print("launch with a lot of output, this is rank 0")
-        tensorforce_environment = resume_env(plot=False)
+        tensorforce_environment = resume_env(plot=False, dump_debug=50)
+        RemoteEnvironmentServer(tensorforce_environment, host=host, port=port)
         
     else:
         print("Launch with less output, this is higher rank")
-        # tensorforce_environment = resume_env(plot=False, step=100, dump=100) 
-        # still dump to ensure the CSVs are present, this will look messy in command line...
-        tensorforce_environment = resume_env(plot=False)
-        
-    RemoteEnvironmentServer(tensorforce_environment, host=host, port=port)
+        tensorforce_environment = resume_env(plot=False, dump_debug=50, dump_CL=False)  # No CL output
+        RemoteEnvironmentServer(tensorforce_environment, host=host, port=port, verbose=0)
 
 
 launch_server(host, port)

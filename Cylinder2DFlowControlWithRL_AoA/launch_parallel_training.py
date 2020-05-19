@@ -26,7 +26,7 @@ host = args["host"]
 if host == 'None':
     host = socket.gethostname()
 
-example_environment = resume_env(plot=False, dump_CL=100, dump_debug=100, dump_vtu=100)
+example_environment = resume_env(plot=False, dump_CL=100, dump_debug=10, dump_vtu=50)
 
 use_best_model = True
 
@@ -34,7 +34,7 @@ environments = []
 for crrt_simu in range(number_servers):
     environments.append(RemoteEnvironmentClient(
         example_environment, verbose=0, port=ports_start + crrt_simu, host=host,
-        timing_print=(crrt_simu == 0)
+        timing_print=(crrt_simu == 0)     # Only print time info for env_0
     ))
 
 if use_best_model:
@@ -80,16 +80,11 @@ runner = ParallelRunner(
     evaluation_environment=evaluation_environment   # Evaluation environment object
 )
 
-cwd = os.getcwd()
-evaluation_folder = "env_" + str(number_servers - 1)
-sys.path.append(cwd + evaluation_folder)
-# out_drag_file = open("avg_drag.txt", "w")
-
 runner.run(
     num_episodes=200,
     max_episode_timesteps=nb_actuations,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
     save_best_agent=use_best_model
 )
-# out_drag_file.close()
+
 runner.close()

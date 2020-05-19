@@ -55,7 +55,16 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
                     'mesh_size_medium': 0.3,  # Medium mesh size (at boundary where coarsening starts)
                     'mesh_size_coarse': 1,  # Coarse mesh Size Close to Domain boundaries outside wake
                     'coarse_y_distance_top_bot': 4,  # y-distance from center where mesh coarsening starts
-                    'coarse_x_distance_left_from_LE': 2.5}  # x-distance from upstream face where mesh coarsening starts
+                    'coarse_x_distance_left_from_LE': 2.5,  # x-distance from upstream face where mesh coarsening starts
+                    'AoA': 30}  # Freestream angle of attack in degrees
+
+
+    # Define the inflow Uinf components
+    AoA_rad = math.radians(geometry_params['AoA'])
+    u_inf = math.cos(AoA_rad)
+    v_inf = math.sin(AoA_rad)
+
+    profile = Expression(('u_inf', 'v_inf'), u_inf=u_inf, v_inf=v_inf, degree=2)  # Inflow profile (defined as FEniCS expression)
 
     profile = Expression(('1', '0'), degree=2)  # Inflow profile (defined as FEniCS expression)
 
@@ -77,8 +86,8 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
                      }
 
     optimization_params = {"num_steps_in_pressure_history": 1,  # Number of steps that constitute an environment state (state shape = this * len(locations))
-                        "min_value_jet_MFR": -0.1,  # Set min and max Q* for weak actuation
-                        "max_value_jet_MFR": 0.1,
+                        "min_value_jet_MFR": -1e-2,  # Set min and max Q* for weak actuation
+                        "max_value_jet_MFR": 1e-2,
                         "smooth_control": 0.1,  # parameter alpha to smooth out control
                         "zero_net_Qs": True,  # True for Q1 + Q2 = 0
                         "random_start": random_start}

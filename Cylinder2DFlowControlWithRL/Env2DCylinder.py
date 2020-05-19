@@ -688,6 +688,7 @@ class Env2DCylinder(Environment):
             avg_drag = np.average(self.episode_drags[len(self.episode_drags)//2:])
             avg_area = np.average(self.episode_areas[len(self.episode_areas)//2:])
             avg_lift = np.average(self.episode_lifts[len(self.episode_lifts)//2:])
+
             name = "output.csv"
             if(not os.path.exists("saved_models")):
                 os.mkdir("saved_models")
@@ -700,6 +701,20 @@ class Env2DCylinder(Environment):
                 with open("saved_models/"+name, "a") as csv_file:
                     spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
                     spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
+
+            # Also write in Cylinder2DFlowControlWithRL folder (useful to have data of all episodes together in parallel runs)
+            if(not os.path.exists("../episode_averages")):
+                os.mkdir("../episode_averages")
+            if(not os.path.exists("../episode_averages/"+name)):
+                with open("../episode_averages/"+name, "w") as csv_file:
+                    spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
+                    spam_writer.writerow(["Episode", "AvgDrag", "AvgLift", "AvgRecircArea"])
+                    spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
+            else:
+                with open("../episode_averages/"+name, "a") as csv_file:
+                    spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
+                    spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
+
             # Empty the episode lists for the new episode
             self.episode_drags = np.array([])
             self.episode_areas = np.array([])
