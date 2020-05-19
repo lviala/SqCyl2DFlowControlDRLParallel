@@ -8,7 +8,7 @@ from tensorforce.execution import ParallelRunner
 
 from simulation_base.env import resume_env, nb_actuations
 
-example_environment = resume_env(plot=False, dump=100, single_run=True)
+example_environment = resume_env(plot=False, single_run=True)
 
 deterministic = True
 

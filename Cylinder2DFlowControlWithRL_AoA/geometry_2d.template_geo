@@ -10,6 +10,7 @@ height_domain = {20, Name "Domain Height (ND)"}
 coarse_y_distance_top_bot = {4, Name "y-distance from center where mesh coarsening starts"}
 coarse_x_distance_left_from_LE = {2, Name "x-distance from upstream face where mesh coarsening starts"}
 mesh_size_cylinder = {0.05, Name "Mesh Size on Cylinder Walls"}
+mesh_size_jets = {0.01, Name "Mesh Size on jet suirfaces"}
 mesh_size_medium = {0.2, Name "Medium mesh size (at boundary where coarsening starts"}
 mesh_size_coarse = {1, Name "Coarse mesh Size Close to Domain boundaries outside wake"}
 jet_width = {0.1, Name "Jet Width (ND)"}
@@ -39,14 +40,17 @@ x_jet_leftbound = x_right-jet_width;
 
 // Define all points of rectangle
 p = newp;
-Point(p) = {x_right, y_top, 0, mesh_size_cylinder};  // Top right corner (p)
-Point(p+1) = {x_jet_centre, y_top, 0, mesh_size_cylinder};  // Top jet centre (p+1)
-Point(p+2) = {x_jet_leftbound, y_top, 0, mesh_size_cylinder};  // Top jet upstream bound (p+2)
+Point(p) = {x_right, y_top, 0, mesh_size_jets};  // Top right corner (p)
+Point(p+1) = {x_jet_centre, y_top, 0, mesh_size_jets};  // Top jet centre (p+1)
+Point(p+2) = {x_jet_leftbound, y_top, 0, mesh_size_jets};  // Top jet upstream bound (p+2)
 Point(p+3) = {x_left, y_top, 0, mesh_size_cylinder};  // Top left corner (p+3)
 Point(p+4) = {x_left, y_bot, 0, mesh_size_cylinder};  // Bottom left corner (p+4)
-Point(p+5) = {x_jet_leftbound, y_bot, 0, mesh_size_cylinder};  // Bottom jet upstream bound (p+5)
-Point(p+6) = {x_jet_centre, y_bot, 0, mesh_size_cylinder};  // Bottom jet centre (p+6)
-Point(p+7) = {x_right, y_bot, 0, mesh_size_cylinder};  // Bottom right corner (p+7)
+Point(p+5) = {x_jet_leftbound, y_bot, 0, mesh_size_jets};  // Bottom jet upstream bound (p+5)
+Point(p+6) = {x_jet_centre, y_bot, 0, mesh_size_jets};  // Bottom jet centre (p+6)
+Point(p+7) = {x_right, y_bot, 0, mesh_size_jets};  // Bottom right corner (p+7)
+
+Point(p+8) = {x_right, y_top - r_height/20, 0, mesh_size_cylinder};  // Auxiliary point for top right corner
+Point(p+9) = {x_right, y_bot + r_height/20, 0, mesh_size_cylinder};  // Auxiliary point for bottom right corner
 
 If(jets_toggle)
 
@@ -77,9 +81,11 @@ If(jets_toggle)
 
   // Define right no-slip surface
   l = newl;
-  Line(l) = {p+7, p};
-  no_slip_cyl[] += {l};
-  cylinder[] += {l}; // Add to cylinder list
+  Line(l) = {p+7, p+9};
+  Line(l+1) = {p+9, p+8};
+  Line(l+2) = {p+8, p};
+  no_slip_cyl[] += {l, l+1, l+2};
+  cylinder[] += {l, l+1, l+2}; // Add to cylinder list
 
   Physical Line(4) = {no_slip_cyl[]};  // Define no-slip cylinder physical surfaces
 

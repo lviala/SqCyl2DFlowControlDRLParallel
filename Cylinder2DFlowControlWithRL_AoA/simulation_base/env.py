@@ -18,18 +18,20 @@ import math
 import os
 cwd = os.getcwd()
 
-nb_actuations = 80 # Number of actions (NN actuations) taken per episode (Number of action intervals)
+nb_actuations = 60 # Number of actions (NN actuations) taken per episode (Number of action intervals)
 
-def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec area) during training
-               step=50, # If verbose > 0, every "step" steps print (step,Qs,probe values, drag, lift, recArea) to screen (see def output_data)
-               dump=100, # If not False, we generate output.csv with episode averages and
+def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec area) during training
+               dump_vtu=100,  # If not False, create vtu files of area, velocity, pressure, every 'dump_vtu' steps
+               dump_debug=100,  # If not False, output step info of ep,step,rec_area,L,D,jets Q* to saved_models/debug.csv, every 'dump_debug' steps
+               dump_CL=100,  # If not False, output step info of ep,step,rec_area,L,D,jets Q* to command line, every 'dump_CL' steps
                remesh=False,
                random_start=False,
                single_run=False):
+
     # ---------------------------------------------------------------------------------
     # the configuration version number 1
 
-    simulation_duration = 20.0 #duree en secondes de la simulation
+    simulation_duration = 30.0 #duree en secondes de la simulation
     dt = 0.004
 
     root = 'mesh/turek_2d'  # Root of geometry file path
@@ -49,11 +51,13 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
                     'x_downstream': 26,  # Domain Downstream Length (from right-most rect point)
                     'height_domain': 25,  # Domain Height
                     'mesh_size_cylinder': 0.05,  # Mesh Size on Cylinder Walls
+                    'mesh_size_jets': 0.005,  # Mesh size on jet boundaries
                     'mesh_size_medium': 0.3,  # Medium mesh size (at boundary where coarsening starts)
                     'mesh_size_coarse': 1,  # Coarse mesh Size Close to Domain boundaries outside wake
                     'coarse_y_distance_top_bot': 4,  # y-distance from center where mesh coarsening starts
                     'coarse_x_distance_left_from_LE': 2.5,  # x-distance from upstream face where mesh coarsening starts
                     'AoA': 30}  # Freestream angle of attack in degrees
+
 
     # Define the inflow Uinf components
     AoA_rad = math.radians(geometry_params['AoA'])
@@ -61,6 +65,8 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
     v_inf = math.sin(AoA_rad)
 
     profile = Expression(('u_inf', 'v_inf'), u_inf=u_inf, v_inf=v_inf, degree=2)  # Inflow profile (defined as FEniCS expression)
+
+    profile = Expression(('1', '0'), degree=2)  # Inflow profile (defined as FEniCS expression)
 
     flow_params = {'mu': 1E-2,  # Dynamic viscosity. This in turn defines the Reynolds number: Re = U * D / mu
                   'rho': 1,  # Density
@@ -87,8 +93,9 @@ def resume_env(plot=False, # To plot results (Field, controls, lift, drag, rec a
                         "random_start": random_start}
 
     inspection_params = {"plot": plot,
-                        "step": step,
-                        "dump": dump,
+                        "dump_vtu": dump_vtu,
+                        "dump_debug": dump_debug,
+                        "dump_CL": dump_CL,
                         "range_pressure_plot": [-2.0, 1],   # ylim for pressure dynamic plot
                         "range_drag_plot": [-0.175, -0.13],  # ylim for drag dynamic plot
                         "range_lift_plot": [-0.2, +0.2],  # ylim for lift dynamic plot
