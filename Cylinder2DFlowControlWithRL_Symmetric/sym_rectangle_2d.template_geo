@@ -1,0 +1,143 @@
+// Define parameters. All Non-Dimensional (ND). These can then be quickly modified within the code.
+DefineConstant[
+jets_toggle = {1, Name "Toggle Jets --> 0 : No jets, 1: Yes jets"}
+height_cylinder = {1, Name "Cylinder Height (ND)"}
+ar = {1.0, Name "Cylinder Aspect Ratio"}
+cylinder_y_shift = {0.0, Name "Cylinder Center Shift from Centerline, Positive UP (ND)"}
+x_upstream = {20, Name "Domain Upstream Length (from left-most rect point) (ND)"}
+x_downstream = {26, Name "Domain Downstream Length (from right-most rect point) (ND)"}
+height_domain = {25, Name "Domain Height (ND)"}
+coarse_y_distance_top_bot = {4, Name "y-distance from center where mesh coarsening starts"}
+coarse_x_distance_left_from_LE = {2.5, Name "x-distance from upstream face where mesh coarsening starts"}
+mesh_size_cylinder = {0.05, Name "Mesh Size on Cylinder Walls"}
+mesh_size_medium = {0.3, Name "Medium mesh size (at boundary where coarsening starts"}
+mesh_size_coarse = {1, Name "Coarse mesh Size Close to Domain boundaries outside wake"}
+jet_width = {0.1, Name "Jet Width (ND)"}
+];
+
+//   The domain
+//     D----------------------------------------------C
+//     |                                              |
+//     |                                              |
+//     |        Y-------------------------------------Z
+//     |        |                                     |
+//     |        |        N ----- O                    |
+//     |        |        |       |                    |
+//     A--------X--------M       P--------------------B
+//
+//  Note: X,Y and Z bound the area where the mesh is refined
+
+// Seed the cylinder's center's identifier and create the center point
+center = newp;
+Point(center) = {0, 0, 0, mesh_size_cylinder};
+
+// Cylinder dimensions
+r_height = height_cylinder; // Cylinder height
+r_length = ar*height_cylinder; // Cylinder length
+
+// Note: Everything is defined in CCW sense
+
+// Define points for half the body
+
+M = newp;
+Point(M) = {-r_length/2, 0, 0, mesh_size_cylinder};
+
+N = newp;
+Point(N) = {-r_length/2, r_height/2, 0, mesh_size_cylinder};
+
+O = newp;
+Point(O) = {r_length/2, r_height/2, 0, mesh_size_cylinder};
+
+P = newp;
+Point(P) = {r_length/2, 0, 0, mesh_size_cylinder};
+
+MN = newl;
+Line(MN) = {M, N};
+
+NO = newl;
+Line(NO) = {N, O};
+
+OP = newl;
+Line(OP) = {O, P};
+
+
+// Define points for remainder of the domain
+
+A = newp;
+Point(A) = {-r_length/2-x_upstream, 0, 0, mesh_size_coarse};
+
+B = newp;
+Point(B) = {r_length/2+x_downstream, 0, 0, mesh_size_medium};
+
+C = newp;
+Point(C) = {r_length/2+x_downstream, height_domain/2, 0, mesh_size_coarse};
+
+D = newp;
+Point(D) = {-r_length/2-x_upstream, height_domain/2, 0, mesh_size_coarse};
+
+X = newp;
+Point(X) = {-r_length/2-coarse_x_distance_left_from_LE, 0, 0, mesh_size_medium};
+
+Y = newp;
+Point(Y) = {-r_length/2-coarse_x_distance_left_from_LE, coarse_y_distance_top_bot, 0, mesh_size_medium};
+
+Z = newp;
+Point(Z) = {r_length/2+x_downstream, coarse_y_distance_top_bot, 0, mesh_size_medium};
+
+
+// Coarse region segments:
+
+AX = newl;
+Line(AX) = {A, X};
+
+XY = newl;
+Line(XY) = {X, Y};
+
+YZ = newl;
+Line(YZ) = {Y, Z};
+
+ZC = newl;
+Line(ZC) = {Z, C};
+
+CD = newl;
+Line(CD) = {C, D};
+
+DA = newl;
+Line(DA) = {D, A};
+
+// Finer region segments:
+
+XM = newl;
+Line(XM) = {X, M};
+
+PB = newl;
+Line(PB) = {P, B};
+
+BZ = newl;
+Line(BZ) = {B, Z};
+
+
+// BCs physical lines
+
+Physical Line(1) = {CD};  // Top boundary
+Physical Line(2) = {BZ, ZC};  // Outflow
+Physical Line(3) = {DA};  // Inflow
+Physical Line(4) = {MN, NO, OP};  // No-Slip (Body)
+Physical Line(5) = {AX, XM, PB};  // Symmetry
+
+// Define coarse region (line loop and plane surface)
+coarse = newll;
+Line Loop(coarse) = {AX, XY, YZ, ZC, CD, DA};
+sc = news;
+Plane Surface(sc) = {coarse};
+
+// Define fine region (line loop and plane surface)
+fine = newll;
+Line Loop(fine) = {XM, MN, NO, OP, PB, BZ, -YZ, -XY};
+sf = news;
+Plane Surface(sf) = {fine};
+
+// Define physical surface
+Physical Surface(1) = {sc, sf};
+
+

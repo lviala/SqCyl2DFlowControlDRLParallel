@@ -8,7 +8,7 @@ from tensorforce.execution import ParallelRunner
 
 from simulation_base.env import resume_env, nb_actuations
 
-example_environment = resume_env(plot=False, single_run=True)
+example_environment = resume_env(plot=False, single_run=True, dump_debug=1)
 
 deterministic = True
 
@@ -59,7 +59,7 @@ def one_run():
     state = example_environment.reset()
     example_environment.render = True
 
-    for k in range(3*nb_actuations):
+    for k in range(5*nb_actuations):
         action = agent.act(state, deterministic=deterministic, independent=True)
         state, terminal, reward = example_environment.execute(action)
 
