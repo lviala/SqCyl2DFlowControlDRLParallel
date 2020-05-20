@@ -31,7 +31,7 @@ class FlowSolver(object):
         outlet_tag = 2
         wall_tag = 1
         cylinder_noslip_tag = 4
-        symmetry_tag
+        symmetry_tag = 5
 
         # Define function spaces
         V = VectorFunctionSpace(mesh, 'CG', 2)
