@@ -1,4 +1,4 @@
-from jet_bcs import JetBCValue
+
 from dolfin import *
 import numpy as np
 
@@ -31,7 +31,7 @@ class FlowSolver(object):
         outlet_tag = 2
         wall_tag = 1
         cylinder_noslip_tag = 4
-        # Tags 5 and higher are jets
+        symmetry_tag
 
         # Define function spaces
         V = VectorFunctionSpace(mesh, 'CG', 2)
@@ -90,31 +90,11 @@ class FlowSolver(object):
         bcu_cyl_wall = DirichletBC(V, Constant((0, 0)), surfaces, cylinder_noslip_tag)
         # Fixing outflow pressure
         bcp_outflow = DirichletBC(Q, Constant(0), surfaces, outlet_tag)
-
-        # Now the expression for the jets
-        # NOTE: they start with Q=0
-        width = geometry_params['jet_width']
-        length_cylinder = geometry_params['height_cylinder'] * geometry_params['ar']
-
-        bcu_jet = []
-        jet_tags = list(range(cylinder_noslip_tag + 1, cylinder_noslip_tag + 1 + 2))  # 5 and 6 for 2 jets
-
-        jets = [Expression(('0', '-(3/2) * (Q/width) * (1 - pow((2 * x[0] - length_cylinder + width) / width, 2))'),  # top jet
-                           width=width, length_cylinder=length_cylinder, Q=0, degree=1),
-                Expression(('0', '(3/2) * (Q/width) * (1 - pow((2 * x[0] - length_cylinder + width) / width, 2))'),  # bot jet
-                           width=width, length_cylinder=length_cylinder, Q=0, degree=1)]
-        # If this doesnt work, maybe it has to do with how dolfin define the origin for Expressions
-        # Maybe try x[1] <= 0 ? - : +
-
-        for tag, jet in zip(jet_tags, jets):
-            bc = DirichletBC(V, jet, surfaces, tag)
-            bcu_jet.append(bc)
-
         # Define symmetric BC
-        bc_symmetry = DirichletBC(V.sub(1), Constant(0), surfaces, 5)
+        bc_symmetry = DirichletBC(V.sub(1), Constant(0), surfaces, symmetry_tag)
 
         # All bcs objects togets
-        bcu = [bcu_inlet, bc_symmetry, bcu_wall, bcu_cyl_wall] + bcu_jet
+        bcu = [bcu_inlet, bc_symmetry, bcu_wall, bcu_cyl_wall]
         bcp = [bcp_outflow]
 
         As = [Matrix() for i in range(3)]
@@ -150,8 +130,6 @@ class FlowSolver(object):
 
         gtime = 0.  # External clock
 
-        # Things to remeber for evolution
-        self.jets = jets
         # Keep track of time so that we can query it outside
         self.gtime, self.dt = gtime, dt
         # Remember inflow profile function in case it is time dependent
@@ -174,14 +152,10 @@ class FlowSolver(object):
         self.viscosity = mu
         self.density = rho
         self.normal = n
-        self.cylinder_surface_tags = [cylinder_noslip_tag] + jet_tags
+        self.cylinder_surface_tags = [cylinder_noslip_tag]
 
-    def evolve(self, jet_bc_values):
-        '''Make one time step with the given values of jet boundary conditions'''
-        assert len(jet_bc_values) == len(self.jets)
-
-        # Update bc expressions
-        for Q, jet in zip(jet_bc_values, self.jets): jet.Q = Q
+    def evolve(self, jet_bc_values): # NOTE: evolve will still take in values but won't do anything with them, to avoid further modifications in other files
+        '''Make one time step '''
 
         # Make a step
         self.gtime += self.dt(0)

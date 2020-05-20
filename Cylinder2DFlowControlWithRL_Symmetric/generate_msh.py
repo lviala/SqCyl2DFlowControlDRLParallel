@@ -34,7 +34,7 @@ def generate_mesh(args, template='geometry_2d.template_geo', dim=2):
 
     list_geometric_parameters = ['jets_toggle', 'jet_width', 'height_cylinder', 'ar', 'cylinder_y_shift',
                                  'x_upstream', 'x_downstream', 'height_domain',
-                                 'mesh_size_cylinder', 'mesh_size_jets', 'mesh_size_medium', 'mesh_size_coarse',
+                                 'mesh_size_cylinder', 'mesh_size_medium', 'mesh_size_coarse',
                                  'coarse_y_distance_top_bot', 'coarse_x_distance_left_from_LE']
 
     constants = " "

@@ -1,4 +1,4 @@
-from jet_bcs import JetBCValue
+
 from dolfin import *
 import numpy as np
 
