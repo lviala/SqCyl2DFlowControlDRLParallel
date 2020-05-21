@@ -19,6 +19,7 @@ import os
 cwd = os.getcwd()
 
 nb_actuations = 60 # Number of actions (NN actuations) taken per episode (Number of action intervals)
+simulation_duration = 30.0
 
 def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec area) during training
                dump_vtu=100,  # If not False, create vtu files of area, velocity, pressure, every 'dump_vtu' steps

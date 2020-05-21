@@ -9,7 +9,7 @@ import csv
 from tensorforce.agents import Agent
 from tensorforce.execution import ParallelRunner
 
-from env import resume_env, nb_actuations
+from env import resume_env, nb_actuations, simulation_duration
 
 example_environment = resume_env(plot=False, dump_CL=100, dump_debug=1, dump_vtu=50, single_run=True)
 
@@ -29,7 +29,11 @@ def one_run():
     example_environment.render = True
     null_action = np.zeros(example_environment.actions()['shape'])
 
-    for k in range(10*nb_actuations):
+    action_step_size = simulation_duration / nb_actuations  # Duration of 1 train episode / actions in 1 episode
+    single_run_duration = 120  # In non-dimensional time
+    action_steps = int(single_run_duration / action_step_size)
+
+    for k in range(action_steps):
         state, terminal, reward = example_environment.execute(null_action)
 
     print("finish simulation\n")

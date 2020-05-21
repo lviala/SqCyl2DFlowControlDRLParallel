@@ -6,7 +6,7 @@ import csv
 from tensorforce.agents import Agent
 from tensorforce.execution import ParallelRunner
 
-from simulation_base.env import resume_env, nb_actuations
+from simulation_base.env import resume_env, nb_actuations, simulation_duration
 
 example_environment = resume_env(plot=False, single_run=True, dump_debug=1)
 
@@ -59,7 +59,11 @@ def one_run():
     state = example_environment.reset()
     example_environment.render = True
 
-    for k in range(5*nb_actuations):
+    action_step_size = simulation_duration / nb_actuations  # Duration of 1 train episode / actions in 1 episode
+    single_run_duration = 120  # In non-dimensional time
+    action_steps = int(single_run_duration / action_step_size)
+
+    for k in range(action_steps):
         action = agent.act(state, deterministic=deterministic, independent=True)
         state, terminal, reward = example_environment.execute(action)
 
