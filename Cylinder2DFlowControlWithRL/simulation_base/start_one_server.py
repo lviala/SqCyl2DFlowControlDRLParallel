@@ -53,12 +53,12 @@ def launch_server(host, port):
     # to avoid cluttering the terminal...
     if rank == 0:
         print("launch with a lot of output, this is rank 0")
-        tensorforce_environment = resume_env(plot=False, dump_debug=50)
+        tensorforce_environment = resume_env(plot=False, dump_debug=1)
         RemoteEnvironmentServer(tensorforce_environment, host=host, port=port)
         
     else:
         print("Launch with less output, this is higher rank")
-        tensorforce_environment = resume_env(plot=False, dump_debug=50, dump_CL=False)  # No CL output
+        tensorforce_environment = resume_env(plot=False, dump_debug=1, dump_CL=False)  # No CL output
         RemoteEnvironmentServer(tensorforce_environment, host=host, port=port, verbose=0)
 
 

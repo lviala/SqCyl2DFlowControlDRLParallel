@@ -18,8 +18,8 @@ import math
 import os
 cwd = os.getcwd()
 
-nb_actuations = 60 # Number of actions (NN actuations) taken per episode (Number of action intervals)
-simulation_duration = 30.0
+nb_actuations = 100 # Number of actions (NN actuations) taken per episode (Number of action intervals)
+simulation_duration = 50.0
 
 def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec area) during training
                dump_vtu=100,  # If not False, create vtu files of area, velocity, pressure, every 'dump_vtu' steps
@@ -32,7 +32,7 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
     # ---------------------------------------------------------------------------------
     # the configuration version number 1
 
-    simulation_duration = 30.0 #duree en secondes de la simulation
+    simulation_duration = 50.0 #duree en secondes de la simulation
     dt = 0.004
 
     root = 'mesh/turek_2d'  # Root of geometry file path

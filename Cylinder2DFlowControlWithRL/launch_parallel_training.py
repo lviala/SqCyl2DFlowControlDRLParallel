@@ -26,7 +26,7 @@ host = args["host"]
 if host == 'None':
     host = socket.gethostname()
 
-example_environment = resume_env(plot=False, dump_CL=100, dump_debug=10, dump_vtu=50)
+example_environment = resume_env(plot=False, dump_CL=100, dump_debug=1, dump_vtu=50)
 
 use_best_model = True
 
@@ -81,10 +81,26 @@ runner = ParallelRunner(
 )
 
 runner.run(
-    num_episodes=200,
+    num_episodes=500,
     max_episode_timesteps=nb_actuations,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
     save_best_agent=use_best_model
 )
+
+# Print statistics
+print("Learning finished. Total episodes: {ep}. Average reward of last 100 episodes: {ar}.".format(
+    ep=runner.episode,
+    ar=np.mean(runner.episode_rewards[-100:]))
+)
+
+name = "returns_tf.csv"
+if (not os.path.exists("saved_models")):
+    os.mkdir("saved_models")
+if (not os.path.exists("saved_models/" + name)):
+    with open("saved_models/" + name, "w") as csv_file:
+        spam_writer = csv.writer(csv_file, delimiter=";", lineterminator="\n")
+        spam_writer.writerow(["Episode", "Return"])
+        for ep in range(len(runner.episode_rewards)):
+            spam_writer.writerow([ep+1, runner.episode_rewards[ep]])
 
 runner.close()

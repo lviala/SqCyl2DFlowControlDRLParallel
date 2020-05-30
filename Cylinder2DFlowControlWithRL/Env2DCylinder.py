@@ -683,7 +683,7 @@ class Env2DCylinder(Environment):
 
         # If new episode (not single run), record avg qtys for last ep
         if(self.last_episode_number != self.episode_number and "single_run" in self.inspection_params and self.inspection_params["single_run"] == False):
-            self.last_episode_number = self.episode_number  # Update last_episode_number, as no we will record the avgs for the last episode
+            self.last_episode_number = self.episode_number  # Update last_episode_number, as now we will record the avgs for the last episode
             # Find avgs for the 2nd half of each ep
             avg_drag = np.average(self.episode_drags[len(self.episode_drags)//2:])
             avg_area = np.average(self.episode_areas[len(self.episode_areas)//2:])
@@ -873,6 +873,8 @@ class Env2DCylinder(Environment):
 
         reward = self.compute_reward()
 
+        self.save_reward(reward)
+
         if self.verbose > 2:
             print(reward)
 
@@ -912,6 +914,23 @@ class Env2DCylinder(Environment):
 
         else:
             raise RuntimeError("Reward function {} not yet implemented".format(self.reward_function))
+
+
+    def save_reward(self, reward):
+
+        name = "rewards.csv"
+        if (not os.path.exists("saved_models")):
+            os.mkdir("saved_models")
+        if (not os.path.exists("saved_models/" + name)):
+            with open("saved_models/" + name, "w") as csv_file:
+                spam_writer = csv.writer(csv_file, delimiter=";", lineterminator="\n")
+                spam_writer.writerow(["Episode", "Step", "Reward"])
+                spam_writer.writerow([self.episode_number, self.solver_step-1, reward])
+        else:
+            with open("saved_models/" + name, "a") as csv_file:
+                spam_writer = csv.writer(csv_file, delimiter=";", lineterminator="\n")
+                spam_writer.writerow([self.episode_number, self.solver_step-1, reward])
+
 
     def states(self):
         '''

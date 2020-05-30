@@ -98,7 +98,7 @@ def probe_positions(probe_distribution, geometry_params):
         elif distribution_type == 'base':
 
             positions_probes_for_grid_x = length_cylinder / 2
-            positions_probes_for_grid_y = [-height_cylinder/2 + (height_cylinder/(n_base+1)) * i for i in range(1,n_base+1)]
+            positions_probes_for_grid_y = [-height_cylinder/2 + (height_cylinder/(n_base+1)) * i for i in range(1, n_base+1)]
 
             for crrt_y in positions_probes_for_grid_y:
                 list_position_probes.append(np.array([positions_probes_for_grid_x, crrt_y]))  # Append (x,y) pairs np array
