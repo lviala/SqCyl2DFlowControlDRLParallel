@@ -174,5 +174,6 @@ s = news;
 Plane Surface(s) = {fine_outer, fine_inner}; // Should be outer, inner, no??
 Physical Surface(1) += {s}; // // Add to surface to be mesh
 
+
 // First the jet and no slip surfaces of the cylinder are defined. Each jet surface is a physical line and all the no slip
 // cylinder surfaces are another. Then the domain is created.

@@ -5,7 +5,8 @@ def probe_positions(probe_distribution, geometry_params):
     '''
     Function that returns the list of np arrays with probe position coordinate pairs for a given distribution.
     Distributions implemented:
-    'rabault151' - Original distribution of 151 used by Rabault in his papers
+    'rabault151' - Original distribution of 151 used by Rabault in his two first papers
+    'rabault241' - Similar distribution to 'Rabault151' but with a increased number of probes in the wake
     'rabault9' - Partial information distribution tested by Rabault in the appendix of his first 2019 paper.
     'base' - Distribution where n_base evenly distributed probes are only located at the base of the cylinder
 
@@ -33,12 +34,19 @@ def probe_positions(probe_distribution, geometry_params):
 
     list_position_probes = []  # Initialise list of (x,y) np arrays with positions coordinate pairs
 
-    if distribution_type == 'rabault151':
+    if (distribution_type == 'rabault151' or distribution_type == 'rabault241'):
 
-        # The 9 'columns' of 7 probes downstream of the cylinder
-        positions_probes_x_dist_from_right_side = [0.25, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
-        positions_probes_for_grid_x = [length_cylinder/2 + x for x in positions_probes_x_dist_from_right_side]
-        positions_probes_for_grid_y = [-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5]
+        if distribution_type == 'rabault151':
+            # The 9 'columns' of 7 probes downstream of the cylinder
+            positions_probes_x_dist_from_right_side = [0.25, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
+            positions_probes_for_grid_x = [length_cylinder/2 + x for x in positions_probes_x_dist_from_right_side]
+            positions_probes_for_grid_y = [-1.5, -1, -0.5, 0.0, 0.5, 1, 1.5]
+
+        if distribution_type == 'rabault241':
+            # The 17 'columns' of 9 probes downstream of the cylinder
+            positions_probes_x_dist_from_right_side = [0.25, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10]
+            positions_probes_for_grid_x = [length_cylinder / 2 + x for x in positions_probes_x_dist_from_right_side]
+            positions_probes_for_grid_y = [-2, -1.5, -1, -0.5, 0.0, 0.5, 1, 1.5, 2]
 
         for crrt_x in positions_probes_for_grid_x:
             for crrt_y in positions_probes_for_grid_y:
@@ -98,7 +106,7 @@ def probe_positions(probe_distribution, geometry_params):
         elif distribution_type == 'base':
 
             positions_probes_for_grid_x = length_cylinder / 2
-            positions_probes_for_grid_y = [-height_cylinder/2 + (height_cylinder/(n_base+1)) * i for i in range(1, n_base+1)]
+            positions_probes_for_grid_y = [-height_cylinder/2 + (height_cylinder/(n_base+1)) * i for i in range(1,n_base+1)]
 
             for crrt_y in positions_probes_for_grid_y:
                 list_position_probes.append(np.array([positions_probes_for_grid_x, crrt_y]))  # Append (x,y) pairs np array
