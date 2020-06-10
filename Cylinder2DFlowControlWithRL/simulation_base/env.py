@@ -67,7 +67,7 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
     solver_params = {'dt': dt}
 
     # Define probes positions
-    probe_distribution = {'distribution_type': 'rabault151',
+    probe_distribution = {'distribution_type': 'rabault241',
                           'probes_at_jets': False,  # Whether to use probes at jets or not (for distributions other than 'rabault151'
                           'n_base': 8}  # Number of probes at cylinder base if 'base' distribution is used
 

@@ -81,7 +81,7 @@ runner = ParallelRunner(
 )
 
 runner.run(
-    num_episodes=500,
+    num_episodes=600,
     max_episode_timesteps=nb_actuations,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
     save_best_agent=use_best_model

@@ -30,7 +30,7 @@ def one_run():
     null_action = np.zeros(example_environment.actions()['shape'])
 
     action_step_size = simulation_duration / nb_actuations  # Duration of 1 train episode / actions in 1 episode
-    single_run_duration = 150  # In non-dimensional time
+    single_run_duration = 250  # In non-dimensional time
     action_steps = int(single_run_duration / action_step_size)
 
     for k in range(action_steps):
