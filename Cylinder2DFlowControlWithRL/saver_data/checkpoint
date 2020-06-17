@@ -1,6 +1,0 @@
-model_checkpoint_path: "/home/fenics/local/Cylinder2DFlowControlDRLParallel/Cylinder2DFlowControlWithRL/saver_data/model-60799"
-all_model_checkpoint_paths: "/home/fenics/local/Cylinder2DFlowControlDRLParallel/Cylinder2DFlowControlWithRL/saver_data/model-58899"
-all_model_checkpoint_paths: "/home/fenics/local/Cylinder2DFlowControlDRLParallel/Cylinder2DFlowControlWithRL/saver_data/model-59448"
-all_model_checkpoint_paths: "/home/fenics/local/Cylinder2DFlowControlDRLParallel/Cylinder2DFlowControlWithRL/saver_data/model-60002"
-all_model_checkpoint_paths: "/home/fenics/local/Cylinder2DFlowControlDRLParallel/Cylinder2DFlowControlWithRL/saver_data/model-60556"
-all_model_checkpoint_paths: "/home/fenics/local/Cylinder2DFlowControlDRLParallel/Cylinder2DFlowControlWithRL/saver_data/model-60799"
