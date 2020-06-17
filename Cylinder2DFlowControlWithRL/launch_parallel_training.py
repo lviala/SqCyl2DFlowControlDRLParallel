@@ -6,7 +6,7 @@ import socket
 import numpy as np
 
 from tensorforce.agents import Agent
-from tensorforce.execution import ParallelRunner
+from tensorforce.execution import Runner
 
 from simulation_base.env import resume_env, nb_actuations
 from RemoteEnvironmentClient import RemoteEnvironmentClient
@@ -36,11 +36,6 @@ for crrt_simu in range(number_servers):
         example_environment, verbose=0, port=ports_start + crrt_simu, host=host,
         timing_print=(crrt_simu == 0)     # Only print time info for env_0
     ))
-
-if use_best_model:
-    evaluation_environment = environments.pop()
-else:
-    evaluation_environment = None
 
 network = [dict(type='dense', size=512), dict(type='dense', size=512)]
 
@@ -76,13 +71,14 @@ agent = Agent.create(
 
 runner = ParallelRunner(
     agent=agent,
+    max_episode_timesteps=nb_actuations,
+    evaluation=True,    # whether to use last of parallel environments as evaluation (deterministic)
     environments=environments,  # List of environment objects from which we gather experience
-    evaluation_environment=evaluation_environment   # Evaluation environment object
+    remote = "multiprocessing"
 )
 
 runner.run(
     num_episodes=600,
-    max_episode_timesteps=nb_actuations,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
     save_best_agent=use_best_model
 )
