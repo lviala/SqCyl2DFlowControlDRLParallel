@@ -1,3 +1,11 @@
+# Ignore Test run files
+env_*/
+best_agent/
+results/
+episode_averages/
+saver_data/
+saved_models/
+
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
 # Byte-compiled / optimized / DLL files

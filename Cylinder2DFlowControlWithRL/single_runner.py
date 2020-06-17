@@ -44,7 +44,7 @@ agent = Agent.create(
 # restore_file = 'model-40000'
 # agent.restore(restore_directory, restore_file)
 # agent.restore()
-agent.initialize()
+# agent.initialize() # Legacy
 
 
 # If previous evaluation results exist, delete them

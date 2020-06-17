@@ -72,7 +72,7 @@ agent = Agent.create(
 runner = Runner(
     agent=agent,
     max_episode_timesteps=nb_actuations,
-    evaluation=True,    # whether to use last of parallel environments as evaluation (deterministic)
+    evaluation=False,    # whether to use last of parallel environments as evaluation (deterministic)
     environments=environments,  # List of environment objects from which we gather experience
     remote = "multiprocessing"
 )
@@ -80,7 +80,6 @@ runner = Runner(
 runner.run(
     num_episodes=600,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
-    save_best_agent=os.path.join(os.getcwd(), 'best_agent')
 )
 
 # Print statistics
