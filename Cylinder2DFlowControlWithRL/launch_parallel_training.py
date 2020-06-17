@@ -48,7 +48,7 @@ agent = Agent.create(
     # Network
     network=network,  # Policy NN specification
     # Optimization
-    batch_size=20,  # Number of episodes per update batch
+    batch_size=20,  # Number of episodes per update batch #20 default
     learning_rate=1e-3,  # Optimizer learning rate
     subsampling_fraction=0.2,  # Fraction of batch timesteps to subsample
     optimization_steps=25,
@@ -69,7 +69,7 @@ agent = Agent.create(
     saver=dict(directory=os.path.join(os.getcwd(), 'saver_data')),  # TensorFlow saver configuration for periodic implicit saving
 )
 
-runner = ParallelRunner(
+runner = Runner(
     agent=agent,
     max_episode_timesteps=nb_actuations,
     evaluation=True,    # whether to use last of parallel environments as evaluation (deterministic)
@@ -80,7 +80,7 @@ runner = ParallelRunner(
 runner.run(
     num_episodes=600,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
-    save_best_agent=use_best_model
+    save_best_agent=os.path.join(os.getcwd(), 'best_agent')
 )
 
 # Print statistics

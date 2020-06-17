@@ -4,7 +4,7 @@ import numpy as np
 import csv
 
 from tensorforce.agents import Agent
-from tensorforce.execution import ParallelRunner
+from tensorforce.execution import Runner
 
 from simulation_base.env import resume_env, nb_actuations, simulation_duration
 
