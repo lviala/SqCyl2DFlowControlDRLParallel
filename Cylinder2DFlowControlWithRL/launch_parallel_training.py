@@ -84,7 +84,7 @@ runner.run(
 
 # Print statistics
 print("Learning finished. Total episodes: {ep}. Average reward of last 100 episodes: {ar}.".format(
-    ep=runner.episode,
+    ep=runner.episodes,
     ar=np.mean(runner.episode_rewards[-100:]))
 )
 
@@ -99,3 +99,10 @@ if (not os.path.exists("saved_models/" + name)):
             spam_writer.writerow([ep+1, runner.episode_rewards[ep]])
 
 runner.close()
+agent.save()
+agent.close()
+
+for environment in environments:
+    environment.close()
+
+print("Agent and Runner closed -- Learning complete -- End of script")
