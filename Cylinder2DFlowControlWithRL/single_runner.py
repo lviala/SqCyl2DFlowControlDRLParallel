@@ -12,40 +12,9 @@ example_environment = resume_env(plot=False, single_run=True, dump_debug=1)
 
 deterministic = True
 
-network = [dict(type='dense', size=512), dict(type='dense', size=512)]
+saver_restore = os.getcwd() + "/saver_data/"
 
-saver_restore = dict(directory=os.getcwd() + "/saver_data/")
-
-agent = Agent.create(
-    # Agent + Environment
-    agent='ppo', environment=example_environment, max_episode_timesteps=nb_actuations,
-    # TODO: nb_actuations could be specified by Environment.max_episode_timesteps() if it makes sense...
-    # Network
-    network=network,
-    # Optimization
-    batch_size=20, learning_rate=1e-3, subsampling_fraction=0.2, optimization_steps=25,
-    # Reward estimation
-    likelihood_ratio_clipping=0.2, estimate_terminal=True,  # ???
-    # TODO: gae_lambda=0.97 doesn't currently exist
-    # Critic
-    critic_network=network,
-    critic_optimizer=dict(
-        type='multi_step', num_steps=5,
-        optimizer=dict(type='adam', learning_rate=1e-3)
-    ),
-    # Regularization
-    entropy_regularization=0.01,
-    # TensorFlow etc
-    parallel_interactions=1,
-    saver=saver_restore,  # Restore agent
-)
-
-# restore_directory = './saver_data/'
-# restore_file = 'model-40000'
-# agent.restore(restore_directory, restore_file)
-# agent.restore()
-# agent.initialize() # Legacy
-
+agent = Agent.load(directory = saver_restore)
 
 # If previous evaluation results exist, delete them
 if(os.path.exists("saved_models/test_strategy.csv")):
@@ -60,7 +29,7 @@ def one_run():
     example_environment.render = True
 
     action_step_size = simulation_duration / nb_actuations  # Duration of 1 train episode / actions in 1 episode
-    single_run_duration = 250  # In non-dimensional time
+    single_run_duration = 5  # In non-dimensional time
     action_steps = int(single_run_duration / action_step_size)
 
     for k in range(action_steps):
