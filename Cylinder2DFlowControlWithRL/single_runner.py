@@ -32,8 +32,10 @@ def one_run():
     single_run_duration = 250  # In non-dimensional time
     action_steps = int(single_run_duration / action_step_size)
 
+    internals = agent.initial_internals()
+
     for k in range(action_steps):
-        action = agent.act(state, deterministic=deterministic, independent=True)
+        action, internals = agent.act(state, deterministic=deterministic, independent=True, internals=internals)
         state, terminal, reward = example_environment.execute(action)
 
     data = np.genfromtxt("saved_models/test_strategy.csv", delimiter=";")
