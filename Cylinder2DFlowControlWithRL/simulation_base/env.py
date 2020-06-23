@@ -51,9 +51,9 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
                     'x_upstream': 20,  # Domain Upstream Length (from left-most rect point)
                     'x_downstream': 26,  # Domain Downstream Length (from right-most rect point)
                     'height_domain': 25,  # Domain Height
-                    'mesh_size_cylinder': 0.05,  # Mesh Size on Cylinder Walls
-                    'mesh_size_jets': 0.01,  # Mesh size on jet boundaries
-                    'mesh_size_medium': 0.3,  # Medium mesh size (at boundary where coarsening starts)
+                    'mesh_size_cylinder': 0.075,  # Mesh Size on Cylinder Walls
+                    'mesh_size_jets': 0.015,  # Mesh size on jet boundaries
+                    'mesh_size_medium': 0.45,  # Medium mesh size (at boundary where coarsening starts)
                     'mesh_size_coarse': 1,  # Coarse mesh Size Close to Domain boundaries outside wake
                     'coarse_y_distance_top_bot': 4,  # y-distance from center where mesh coarsening starts
                     'coarse_x_distance_left_from_LE': 2.5}  # x-distance from upstream face where mesh coarsening starts
