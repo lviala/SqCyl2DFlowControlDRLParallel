@@ -29,6 +29,7 @@ from dolfin import *
 
 import numpy as np
 import os
+from collections import deque
 
 import pickle
 
@@ -168,6 +169,8 @@ class Env2DCylinder(Environment):
         self.history_parameters["drag"] = RingBuffer(self.size_history)
         self.history_parameters["lift"] = RingBuffer(self.size_history)
         self.history_parameters["recirc_area"] = RingBuffer(self.size_history)
+
+        self.history_observations = deque(maxlen = (self.optimization_params["num_steps_in_pressure_history"] -1))
 
         # ------------------------------------------------------------------------
         # Remesh if necessary
@@ -785,9 +788,17 @@ class Env2DCylinder(Environment):
 
         self.start_class()
 
-        next_state = np.transpose(np.array(self.probes_values))
+        next_state = dict(obs = np.transpose(np.array(self.probes_values)))
+
+        # Initialize observation history buffer if history observation history is included in state
+        for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+            self.history_observations.append(np.transpose(np.array(self.probes_values)))
+            
+            key = "prev_obs_" + str(n_hist + 1)
+            next_state.update({key : self.history_observations[n_hist]})
+        
         if self.verbose > 0:
-            print(next_state)
+            print(next_state["obs"])
 
         self.episode_number += 1
 
@@ -819,6 +830,9 @@ class Env2DCylinder(Environment):
             
         self.previous_action = self.action  # Store previous action before overwritting action attribute
         self.action = action
+
+        # Append last observation to pressure history buffer
+        self.history_observations.append(np.transpose(np.array(self.probes_values)))
 
         # Run for one action step (several -number_steps_execution- numerical timesteps keeping action=const but changing control)
         for crrt_control_nbr in range(self.number_steps_execution):
@@ -861,10 +875,15 @@ class Env2DCylinder(Environment):
             self.accumulated_lift += self.lift
 
         # TODO: the next_state may incorporate more information: maybe some time information?
-        next_state = np.transpose(np.array(self.probes_values))
+        next_state = dict(obs = np.transpose(np.array(self.probes_values)))
+        
+        # Update past observations if previous history is included in state
+        for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+            key = "prev_obs_" + str(n_hist + 1)
+            next_state.update({key : self.history_observations[n_hist]})
 
         if self.verbose > 2:
-            print(next_state)
+            print(next_state["obs"])
 
         terminal = False
 
@@ -941,14 +960,22 @@ class Env2DCylinder(Environment):
         '''
 
         if self.output_params["probe_type"] == 'pressure':
-            return dict(type='float',
-                        shape=(len(self.output_params["locations"]) * self.optimization_params["num_steps_in_pressure_history"], )
-                        )
+            states = dict(obs = dict(type='float', shape=(len(self.output_params["locations"]), )))
+            
+            # Add nested dict if previous history is included in state
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
+                states.update({"prev_obs_"+ str(n_hist+1) : dict(type='float', shape=(len(self.output_params["locations"]), ))})
+
+            return states
 
         elif self.output_params["probe_type"] == 'velocity':
-            return dict(type='float',
-                        shape=(2 * len(self.output_params["locations"]) * self.optimization_params["num_steps_in_pressure_history"], )
-                        )
+            states = dict(obs = dict(type='float',shape=(2 * len(self.output_params["locations"]), )))
+
+            # Add nested dict if previous history is included in state
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
+                states.update({"prev_obs_"+ str(n_hist+1) : dict(type='float', shape=(2 * len(self.output_params["locations"]), ))})
+            
+            return states
 
     def actions(self):
         '''
