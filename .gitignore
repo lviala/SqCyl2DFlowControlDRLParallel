@@ -5,6 +5,8 @@ results/
 episode_averages/
 saver_data/
 saved_models/
+mesh/
+best_model/
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template

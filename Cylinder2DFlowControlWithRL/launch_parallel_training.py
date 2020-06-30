@@ -37,7 +37,10 @@ for crrt_simu in range(number_servers):
         timing_print=(crrt_simu == 0)     # Only print time info for env_0
     ))
 
-network = [dict(type='retrieve', tensors = ['obs','prev_obs_1']), dict(type='dense', size=512), dict(type='dense', size=512)]
+network = [dict(type='retrieve', tensors = ['obs','prev_obs_1']),
+           dict(type='dense', size=512),
+           dict(type='dense', size=512)
+           ]
 
 agent = Agent.create(
     # Agent + Environment
@@ -67,6 +70,7 @@ agent = Agent.create(
     # TensorFlow etc
     parallel_interactions=number_servers,  # Maximum number of parallel interactions to support
     saver=dict(directory=os.path.join(os.getcwd(), 'saver_data')),  # TensorFlow saver configuration for periodic implicit saving
+    summarizer=dict(directory=os.path.join(os.getcwd(), 'saver_data','summary'), labels=['graph', 'entropy', 'kl-divergence', 'losses', 'rewards'])
 )
 
 runner = Runner(

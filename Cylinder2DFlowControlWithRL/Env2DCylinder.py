@@ -345,6 +345,10 @@ class Env2DCylinder(Environment):
         if self.resetted_number_probes:
             print("Need to fill again the buffer; modified number of probes")
 
+            # Initialize observation history buffer if history observation history is included in state
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+                self.history_observations.appendleft(np.zeros(shape=len(self.output_params["locations"])))
+
             # TODO: Execute runs for 1 action step, so we would be running for (T/Nb)*size_history. While it should be just for size_history.  In practice, remesh if probes change
             for _ in range(self.size_history):
                 self.execute()
@@ -792,7 +796,7 @@ class Env2DCylinder(Environment):
 
         # Initialize observation history buffer if history observation history is included in state
         for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
-            self.history_observations.append(np.transpose(np.array(self.probes_values)))
+            self.history_observations.appendleft(np.transpose(np.array(self.probes_values)))
             
             key = "prev_obs_" + str(n_hist + 1)
             next_state.update({key : self.history_observations[n_hist]})
@@ -832,7 +836,7 @@ class Env2DCylinder(Environment):
         self.action = action
 
         # Append last observation to pressure history buffer
-        self.history_observations.append(np.transpose(np.array(self.probes_values)))
+        self.history_observations.appendleft(np.transpose(np.array(self.probes_values)))
 
         # Run for one action step (several -number_steps_execution- numerical timesteps keeping action=const but changing control)
         for crrt_control_nbr in range(self.number_steps_execution):
