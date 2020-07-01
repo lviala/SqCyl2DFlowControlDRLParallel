@@ -95,7 +95,18 @@ print("Learning finished. Total episodes: {ep}. Average reward of last 100 episo
 name = "returns_tf.csv"
 if (not os.path.exists("saved_models")):
     os.mkdir("saved_models")
-if (not os.path.exists("saved_models/" + name)):
+
+# If continuing previous training - append returns
+if (os.path.exists("saved_models/" + name)):
+    prev_eps = np.genfromtxt("saved_models/" + name, delimiter=';',skip_header=1)
+    offset = int(prev_eps[-1,0])
+    print(offset)
+    with open("saved_models/" + name, "a") as csv_file:
+        spam_writer = csv.writer(csv_file, delimiter=";", lineterminator="\n")
+        for ep in range(len(runner.episode_rewards)):
+            spam_writer.writerow([offset+ep+1, runner.episode_rewards[ep]])
+# If strating training from zero - write returns
+elif (not os.path.exists("saved_models/" + name)):
     with open("saved_models/" + name, "w") as csv_file:
         spam_writer = csv.writer(csv_file, delimiter=";", lineterminator="\n")
         spam_writer.writerow(["Episode", "Return"])
