@@ -32,7 +32,7 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
     # ---------------------------------------------------------------------------------
     # the configuration version number 1
 
-    simulation_duration = 50.0 #duree en secondes de la simulation #50.0 default
+    simulation_duration = 5.0 #duree en secondes de la simulation #50.0 default
     dt = 0.004
 
     root = 'mesh/turek_2d'  # Root of geometry file path

@@ -87,7 +87,7 @@ echo "Launched training!"
 tmux send-keys -t 2 "python3 launch_parallel_training.py -p $2 -n $3"  C-m
 
 # have a look at the training, from the still available first pane
-#tmux select-pane -t 0
-#tmux attach -t $1
+tmux select-pane -t 0
+tmux attach -t $1
 
 exit 0
