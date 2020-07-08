@@ -30,7 +30,7 @@ def generate_mesh(args, template='geometry_2d.template_geo', dim=2):
 
     scale = args.pop('clscale')  # Get mesh size scaling ratio
 
-    cmd = 'gmsh -0 %s ' % output  # Create cmd string to output unrolled geometry
+    cmd = 'gmsh -0 %s' % output  # Create cmd string to output unrolled geometry
 
     list_geometric_parameters = ['jets_toggle', 'jet_width', 'height_cylinder', 'ar', 'cylinder_y_shift',
                                  'x_upstream', 'x_downstream', 'height_domain',
@@ -50,7 +50,7 @@ def generate_mesh(args, template='geometry_2d.template_geo', dim=2):
     unrolled = '_'.join([output, 'unrolled'])
     assert os.path.exists(unrolled)
 
-    return subprocess.call(['gmsh -%d -clscale %g %s' % (dim, scale, unrolled)], shell=True)
+    return subprocess.call(['gmsh -%d -format msh2 -clscale %g %s' % (dim, scale, unrolled)], shell=True)
     # generate 2d mesh --> turek_2d.msh
     # -clscale <float> : Set global mesh element size scaling factor
     # -2: Perform 2D mesh generation, then exit
