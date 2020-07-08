@@ -111,7 +111,7 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
 
     # If so, set the value of n-iter (no. iterations to calculate converged initial state)
     if(remesh):
-        n_iter = int(200.0 / dt)
+        n_iter = int(200.0 / dt) # default: 200
         if (os.path.exists('mesh')):
             shutil.rmtree('mesh')  # If previous mesh directory exists, we delete it
         os.mkdir('mesh')  # Create new empty mesh directory
