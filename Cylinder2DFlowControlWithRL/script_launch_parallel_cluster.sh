@@ -9,12 +9,7 @@ module load anaconda3/personal
 source activate fenicsproject
 
 # Check that FIRST_PORT and NUM_PORT variables are set
-if [ (-v $FIRST_PORT) && (-v $NUM_PORT)]; then
-    echo "Porting variables set"
-else
-    echo "Porting variables not set; abort"
-    exit 1
-fi
+# TODO
 
 # check that all ports are free
 output=$(python3 -c "from utils import bash_check_avail; bash_check_avail($FIRST_PORT, $NUM_PORT)")
@@ -40,7 +35,7 @@ echo "Launching the servers. This takes a few seconds..."
 let "n_sec_sleep = 10 * $NUM_PORT"
 echo "Wait $n_sec_sleep secs for servers to start..."
 
-python3 launch_servers.py -p $FIRST_PORT -n $2&
+python3 launch_servers.py -p $FIRST_PORT -n $NUM_PORT&
 
 sleep $n_sec_sleep
 
