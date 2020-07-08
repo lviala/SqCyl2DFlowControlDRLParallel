@@ -51,7 +51,7 @@ agent = Agent.create(
     # Network
     network=network,  # Policy NN specification
     # Optimization
-    batch_size=8,  # Number of episodes per update batch #20 default
+    batch_size=number_servers,  # Number of episodes per update batch #20 default
     learning_rate=1e-3,  # Optimizer learning rate
     subsampling_fraction=0.2,  # Fraction of batch timesteps to subsample
     optimization_steps=25,
@@ -82,7 +82,7 @@ runner = Runner(
 )
 
 runner.run(
-    num_episodes=8,
+    num_episodes=2,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
 )
 
