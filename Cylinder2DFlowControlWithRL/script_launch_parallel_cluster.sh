@@ -8,31 +8,16 @@ cd $PBS_O_WORKDIR
 module load anaconda3/personal
 source activate fenicsproject
 
-
-if [ $# -eq 0 ]; then
-    echo "No arguments provided; -h for help"
+# Check that FIRST_PORT and NUM_PORT variables are set
+if [ (-v $FIRST_PORT) && (-v $NUM_PORT)]; then
+    echo "Porting variables set"
+else
+    echo "Porting variables not set; abort"
     exit 1
 fi
 
-# if -h, output help
-if [ "$1" == "-h" ]; then
-    echo "A bash script to launch the parallel training automatically:"
-    echo "Usage:"
-    echo "qsub script_launch_parallel.sh -v first_port=firs_port,num_servers=num_servers"
-    exit 0
-
-else
-    if [ $# -eq 2 ]; then
-        # all good
-        :
-    else
-        echo "Wrong number of arguments, abort; see help with -h"
-        exit 1
-    fi
-fi
-
 # check that all ports are free
-output=$(python3 -c "from utils import bash_check_avail; bash_check_avail($2, $3)")
+output=$(python3 -c "from utils import bash_check_avail; bash_check_avail($FIRST_PORT, $NUM_PORT)")
 
 if [ $output == "T" ]; then
     echo "Ports available, launch..."
@@ -52,14 +37,14 @@ fi
 
 # launch servers
 echo "Launching the servers. This takes a few seconds..."
-let "n_sec_sleep = 10 * $2"
+let "n_sec_sleep = 10 * $NUM_PORT"
 echo "Wait $n_sec_sleep secs for servers to start..."
 
-python3 launch_servers.py -p $1 -n $2&
+python3 launch_servers.py -p $FIRST_PORT -n $2&
 
 sleep $n_sec_sleep
 
-python3 launch_parallel_training.py -p $1 -n $2
+python3 launch_parallel_training.py -p $FIRST_PORT -n $NUM_PORT
 
 echo "Launched training!"
 
