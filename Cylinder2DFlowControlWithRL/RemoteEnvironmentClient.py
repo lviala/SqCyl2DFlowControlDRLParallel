@@ -54,7 +54,8 @@ class RemoteEnvironmentClient(Environment):
         # connect to the socket
         # self.socket.connect((self.host, self.port))
         # for a reason I cannot understand, need next line to be able to use forwarding between dockers
-        self.socket.connect(('localhost', self.port))
+        # self.socket.connect(('localhost', self.port))
+        self.socket.connect(('', self.port))
         if self.verbose > 0:
             print('Connected to {}:{}'.format(self.host, self.port))
         # now the socket is ok

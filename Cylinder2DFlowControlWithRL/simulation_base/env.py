@@ -32,7 +32,7 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
     # ---------------------------------------------------------------------------------
     # the configuration version number 1
 
-    simulation_duration = 5.0 #duree en secondes de la simulation #50.0 default
+    simulation_duration = 50.0 #duree en secondes de la simulation #50.0 default
     dt = 0.004
 
     root = 'mesh/turek_2d'  # Root of geometry file path
@@ -67,9 +67,9 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
     solver_params = {'dt': dt}
 
     # Define probes positions
-    probe_distribution = {'distribution_type': 'rabault241',
+    probe_distribution = {'distribution_type': 'base',
                           'probes_at_jets': False,  # Whether to use probes at jets or not (for distributions other than 'rabault151'
-                          'n_base': 8}  # Number of probes at cylinder base if 'base' distribution is used
+                          'n_base': 64}  # Number of probes at cylinder base if 'base' distribution is used
 
     list_position_probes = probe_positions(probe_distribution, geometry_params)
 
@@ -77,7 +77,7 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
                      'probe_type': 'pressure'  # Set quantity measured by probes (pressure/velocity)
                      }
 
-    optimization_params = {"num_steps_in_pressure_history": 2,  # Number of steps that constitute an environment state (state shape = this * len(locations))
+    optimization_params = {"num_steps_in_pressure_history": 4,  # Number of steps that constitute an environment state (state shape = this * len(locations))
                         "min_value_jet_MFR": -0.1,  # Set min and max Q* for weak actuation
                         "max_value_jet_MFR": 0.1,
                         "smooth_control": 0.1,  # parameter alpha to smooth out control

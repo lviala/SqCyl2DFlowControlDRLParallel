@@ -37,10 +37,7 @@ for crrt_simu in range(number_servers):
         timing_print=(crrt_simu == 0)     # Only print time info for env_0
     ))
 
-network = [dict(type='retrieve', tensors = ['obs','prev_obs_1']),
-           dict(type='dense', size=512),
-           dict(type='dense', size=512)
-           ]
+network = [dict(type='retrieve', tensors = ['obs','prev_obs_1','prev_obs_2','prev_obs_3']), dict(type='dense', size=512), dict(type='dense', size=512)]
 
 agent = Agent.create(
     # Agent + Environment
@@ -52,7 +49,7 @@ agent = Agent.create(
     network=network,  # Policy NN specification
     # Optimization
     batch_size=number_servers,  # Number of episodes per update batch #20 default
-    learning_rate=1e-3,  # Optimizer learning rate
+    learning_rate=1e-4,  # Optimizer learning rate
     subsampling_fraction=0.2,  # Fraction of batch timesteps to subsample
     optimization_steps=25,
     # Reward estimation
@@ -82,7 +79,7 @@ runner = Runner(
 )
 
 runner.run(
-    num_episodes=2,
+    num_episodes=1200,
     sync_episodes=True,  # Whether to synchronize parallel environment execution on episode-level
 )
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-#PBS -l walltime=00:30:00
-#PBS -l select=1:ncpus=8:mem=8gb
+#PBS -l walltime=01:00:00
+#PBS -l select=1:ncpus=8:mem=20gb
 
 # Cluster Environment Setup
 cd $PBS_O_WORKDIR
@@ -34,6 +34,8 @@ fi
 echo "Launching the servers. This takes a few seconds..."
 let "n_sec_sleep = 10 * $NUM_PORT"
 echo "Wait $n_sec_sleep secs for servers to start..."
+
+sleep 2
 
 python3 launch_servers.py -p $FIRST_PORT -n $NUM_PORT&
 
