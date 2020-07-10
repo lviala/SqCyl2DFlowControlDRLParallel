@@ -34,6 +34,7 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
 
     simulation_duration = 50.0 #duree en secondes de la simulation #50.0 default
     dt = 0.004
+    siso = False
 
     root = 'mesh/turek_2d'  # Root of geometry file path
     if(not os.path.exists('mesh')):
@@ -74,8 +75,12 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
     list_position_probes = probe_positions(probe_distribution, geometry_params)
 
     output_params = {'locations': list_position_probes,  # List of (x,y) np arrays with probe positions
-                     'probe_type': 'pressure'  # Set quantity measured by probes (pressure/velocity)
+                     'probe_type': 'pressure',  # Set quantity measured by probes (pressure/velocity)
+                     'siso': False # whether to feed as input probe values or difference between average top/bottom pressures
                      }
+
+    # Ensure that siso is True only if probes on body base, and record pressure
+    output_params['siso'] = (siso and probe_distribution['distribution_type'] == 'base' and output_params['probe_type'] == 'pressure')
 
     optimization_params = {"num_steps_in_pressure_history": 4,  # Number of steps that constitute an environment state (state shape = this * len(locations))
                         "min_value_jet_MFR": -0.1,  # Set min and max Q* for weak actuation

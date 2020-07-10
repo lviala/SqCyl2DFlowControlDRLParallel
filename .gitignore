@@ -8,6 +8,7 @@ saved_models/
 best_model/
 simulation_base/mesh/
 mesh/
+script_launch_parallel_local.sh
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template

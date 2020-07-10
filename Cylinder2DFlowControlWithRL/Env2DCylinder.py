@@ -792,6 +792,22 @@ class Env2DCylinder(Environment):
 
         self.start_class()
 
+        # If observations is based on difference of average top and bottom pressures
+        if (self.output_params['siso'] == True):
+            probe_loc_mid = int(len(self.output_params["locations"])/2)
+            press_asym = np.mean(np.array(self.probes_values)[:probe_loc_mid]) - np.mean(np.array(self.probes_values)[-probe_loc_mid:]) 
+            next_state = dict(obs = np.array(press_asym.reshape(1,)))
+            print('initialize siso case')
+            # Initialize observation history buffer if history observation history is included in state
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+                self.history_observations.appendleft(np.transpose(np.array(self.probes_values)))
+
+                key = "prev_obs_" + str(n_hist + 1)
+                press_asym = np.mean(self.history_observations[n_hist][:probe_loc_mid]) - np.mean(self.history_observations[n_hist][-probe_loc_mid:])
+                next_state.update({key : np.array(press_asym.reshape(1,))})
+        
+        # If observations is based on raw pressure probes    
+        else:
         next_state = dict(obs = np.transpose(np.array(self.probes_values)))
 
         # Initialize observation history buffer if history observation history is included in state
@@ -878,7 +894,21 @@ class Env2DCylinder(Environment):
             self.accumulated_drag += self.drag
             self.accumulated_lift += self.lift
 
-        # TODO: the next_state may incorporate more information: maybe some time information?
+        # If observations is based on difference of average top and bottom pressures
+        if (self.output_params['siso'] == True):
+            probe_loc_mid = int(len(self.output_params["locations"])/2)
+            press_asym = np.mean(np.array(self.probes_values)[:probe_loc_mid]) - np.mean(np.array(self.probes_values)[-probe_loc_mid:]) 
+            next_state = dict(obs = np.array(press_asym.reshape(1,)))
+        
+            # Update past observations if previous history is included in state
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+                key = "prev_obs_" + str(n_hist + 1)
+
+                press_asym = np.mean(self.history_observations[n_hist][:probe_loc_mid]) - np.mean(self.history_observations[n_hist][-probe_loc_mid:])
+                next_state.update({key : np.array(press_asym.reshape(1,))})
+        
+        # If observations is based on raw pressure probes    
+        else:
         next_state = dict(obs = np.transpose(np.array(self.probes_values)))
         
         # Update past observations if previous history is included in state
@@ -964,6 +994,16 @@ class Env2DCylinder(Environment):
         '''
 
         if self.output_params["probe_type"] == 'pressure':
+            # If observations is based on difference of average top and bottom pressures
+            if (self.output_params['siso'] == True):
+                states = dict(obs = dict(type='float', shape=(1, )))
+                
+                # Add nested dict if previous history is included in state
+                for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
+                    states.update({"prev_obs_"+ str(n_hist+1) : dict(type='float', shape=(1, ))})
+            
+            # If observations is based on raw pressure probes
+            else:
             states = dict(obs = dict(type='float', shape=(len(self.output_params["locations"]), )))
             
             # Add nested dict if previous history is included in state
