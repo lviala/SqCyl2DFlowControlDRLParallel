@@ -808,15 +808,15 @@ class Env2DCylinder(Environment):
         
         # If observations is based on raw pressure probes    
         else:
-        next_state = dict(obs = np.transpose(np.array(self.probes_values)))
+            next_state = dict(obs = np.transpose(np.array(self.probes_values)))
 
-        # Initialize observation history buffer if history observation history is included in state
-        for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
-            self.history_observations.appendleft(np.transpose(np.array(self.probes_values)))
+            # Initialize observation history buffer if history observation history is included in state
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+                self.history_observations.appendleft(np.transpose(np.array(self.probes_values)))
+                
+                key = "prev_obs_" + str(n_hist + 1)
+                next_state.update({key : self.history_observations[n_hist]})
             
-            key = "prev_obs_" + str(n_hist + 1)
-            next_state.update({key : self.history_observations[n_hist]})
-        
         if self.verbose > 0:
             print(next_state["obs"])
 
@@ -909,12 +909,12 @@ class Env2DCylinder(Environment):
         
         # If observations is based on raw pressure probes    
         else:
-        next_state = dict(obs = np.transpose(np.array(self.probes_values)))
-        
-        # Update past observations if previous history is included in state
-        for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
-            key = "prev_obs_" + str(n_hist + 1)
-            next_state.update({key : self.history_observations[n_hist]})
+            next_state = dict(obs = np.transpose(np.array(self.probes_values)))
+            
+            # Update past observations if previous history is included in state
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+                key = "prev_obs_" + str(n_hist + 1)
+                next_state.update({key : self.history_observations[n_hist]})
 
         if self.verbose > 2:
             print(next_state["obs"])
@@ -1004,11 +1004,11 @@ class Env2DCylinder(Environment):
             
             # If observations is based on raw pressure probes
             else:
-            states = dict(obs = dict(type='float', shape=(len(self.output_params["locations"]), )))
-            
-            # Add nested dict if previous history is included in state
-            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
-                states.update({"prev_obs_"+ str(n_hist+1) : dict(type='float', shape=(len(self.output_params["locations"]), ))})
+                states = dict(obs = dict(type='float', shape=(len(self.output_params["locations"]), )))
+                
+                # Add nested dict if previous history is included in state
+                for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
+                    states.update({"prev_obs_"+ str(n_hist+1) : dict(type='float', shape=(len(self.output_params["locations"]), ))})
 
             return states
 
