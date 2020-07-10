@@ -23,7 +23,7 @@ def probe_positions(probe_distribution, geometry_params):
     # Obtain relevant quantities
 
     distribution_type = probe_distribution['distribution_type']
-    probes_at_jets = probe_distribution['distribution_type']
+    probes_at_jets = probe_distribution['probes_at_jets']
     n_base = probe_distribution['n_base']
 
     height_cylinder = geometry_params['height_cylinder']
