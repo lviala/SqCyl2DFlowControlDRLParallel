@@ -1,6 +1,6 @@
 #!/bin/bash
-#PBS -l walltime=01:00:00
-#PBS -l select=1:ncpus=8:mem=20gb
+#PBS -l walltime=48:00:00
+#PBS -l select=1:ncpus=32:mem=32gb
 
 # Cluster Environment Setup
 cd $PBS_O_WORKDIR
@@ -32,7 +32,7 @@ fi
 
 # launch servers
 echo "Launching the servers. This takes a few seconds..."
-let "n_sec_sleep = 10 * $NUM_PORT"
+let "n_sec_sleep = 20 * $NUM_PORT"
 echo "Wait $n_sec_sleep secs for servers to start..."
 
 sleep 2
