@@ -46,6 +46,9 @@ The job submission requires two environment variables **FIRST_PORT** and **NUM_P
 ```bash
 qsub script_launch_parallel_cluster.sh -v FIRST_PORT=<first_port>,NUM_PORT=<number_parallel_envs>
 ```
+NOTE: make sure there are no spaces between the different environment variables names and values!
+
+## Troubleshooting
 
 If you encounter problems, please:
 
