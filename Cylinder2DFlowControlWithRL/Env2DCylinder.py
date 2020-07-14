@@ -710,8 +710,12 @@ class Env2DCylinder(Environment):
                     spam_writer.writerow([self.last_episode_number, avg_drag, avg_lift, avg_area])
 
             # Also write in Cylinder2DFlowControlWithRL folder (useful to have data of all episodes together in parallel runs)
-            if(not os.path.exists("../episode_averages")):
-                os.mkdir("../episode_averages")
+            try:
+                if(not os.path.exists("../episode_averages")):
+                    os.mkdir("../episode_averages")
+            except OSError as err:
+                print(err)
+
             if(not os.path.exists("../episode_averages/"+name)):
                 with open("../episode_averages/"+name, "w") as csv_file:
                     spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
