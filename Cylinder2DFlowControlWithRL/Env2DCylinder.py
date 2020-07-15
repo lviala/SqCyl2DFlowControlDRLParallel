@@ -797,11 +797,11 @@ class Env2DCylinder(Environment):
         self.start_class()
 
         # If observations is based on difference of average top and bottom pressures
-        if (self.output_params['siso'] == True):
+        if (self.output_params['single_input'] == True):
             probe_loc_mid = int(len(self.output_params["locations"])/2)
             press_asym = np.mean(np.array(self.probes_values)[:probe_loc_mid]) - np.mean(np.array(self.probes_values)[-probe_loc_mid:]) 
             next_state = dict(obs = np.array(press_asym.reshape(1,)))
-            print('initialize siso case')
+            print('initialize single_input case')
             # Initialize observation history buffer if history observation history is included in state
             for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
                 self.history_observations.appendleft(np.transpose(np.array(self.probes_values)))
@@ -848,6 +848,10 @@ class Env2DCylinder(Environment):
 
             nbr_jets = 2
             action = np.zeros((nbr_jets, ))
+        elif (self.optimization_params['single_output'] is True):
+            print(action)
+            action = np.concatenate([action,-action])
+            print(action)
 
         if self.verbose > 2:
             print(action)
@@ -865,16 +869,17 @@ class Env2DCylinder(Environment):
             if "smooth_control" in self.optimization_params:
                 # Original approach used in the JFM paper
                 # self.Qs += self.optimization_params["smooth_control"] * (np.array(action) - self.Qs)
-
                 # Linear interpolation in the control
                 self.Qs = np.array(self.previous_action) + (np.array(self.action) - np.array(self.previous_action)) * ((crrt_control_nbr + 1) / self.number_steps_execution)
+                print(self.Qs)
             else:
                 self.Qs = np.transpose(np.array(action))
 
             # Impose a zero net Qs
-            if "zero_net_Qs" in self.optimization_params:
+            if ("zero_net_Qs" in self.optimization_params) and (self.optimization_params['single_output'] is False):
                 if self.optimization_params["zero_net_Qs"]:
                     self.Qs = self.Qs - np.mean(self.Qs)
+                    print(self.Qs)
 
             # Evolve one numerical timestep forward
             self.u_, self.p_ = self.flow.evolve(self.Qs)
@@ -899,7 +904,7 @@ class Env2DCylinder(Environment):
             self.accumulated_lift += self.lift
 
         # If observations is based on difference of average top and bottom pressures
-        if (self.output_params['siso'] == True):
+        if (self.output_params['single_input'] == True):
             probe_loc_mid = int(len(self.output_params["locations"])/2)
             press_asym = np.mean(np.array(self.probes_values)[:probe_loc_mid]) - np.mean(np.array(self.probes_values)[-probe_loc_mid:]) 
             next_state = dict(obs = np.array(press_asym.reshape(1,)))
@@ -999,7 +1004,7 @@ class Env2DCylinder(Environment):
 
         if self.output_params["probe_type"] == 'pressure':
             # If observations is based on difference of average top and bottom pressures
-            if (self.output_params['siso'] == True):
+            if (self.output_params['single_input'] == True):
                 states = dict(obs = dict(type='float', shape=(1, )))
                 
                 # Add nested dict if previous history is included in state
@@ -1037,10 +1042,16 @@ class Env2DCylinder(Environment):
         # NOTE: we could also have several levels of dict in dict, for example:
         # return { str(i): dict(continuous=True, min_value=0, max_value=1) for i in range(self.n + 1) }
 
-        return dict(type='float',
-                    shape=(2, ),
-                    min_value=self.optimization_params["min_value_jet_MFR"],
-                    max_value=self.optimization_params["max_value_jet_MFR"])
+        if (self.output_params['single_output'] == True):
+            return dict(type='float',
+                        shape=(1, ),
+                        min_value=self.optimization_params["min_value_jet_MFR"],
+                        max_value=self.optimization_params["max_value_jet_MFR"])
+        else:
+            return dict(type='float',
+                        shape=(2, ),
+                        min_value=self.optimization_params["min_value_jet_MFR"],
+                        max_value=self.optimization_params["max_value_jet_MFR"])
 
     def max_episode_timesteps(self):
         return None
