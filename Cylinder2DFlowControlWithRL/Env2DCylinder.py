@@ -848,7 +848,7 @@ class Env2DCylinder(Environment):
 
             nbr_jets = 2
             action = np.zeros((nbr_jets, ))
-        elif (self.optimization_params['single_output'] is True):
+        elif (self.output_params['single_output'] is True):
             print(action)
             action = np.concatenate([action,-action])
             print(action)
@@ -876,7 +876,7 @@ class Env2DCylinder(Environment):
                 self.Qs = np.transpose(np.array(action))
 
             # Impose a zero net Qs
-            if ("zero_net_Qs" in self.optimization_params) and (self.optimization_params['single_output'] is False):
+            if ("zero_net_Qs" in self.optimization_params) and (self.output_params['single_output'] is False):
                 if self.optimization_params["zero_net_Qs"]:
                     self.Qs = self.Qs - np.mean(self.Qs)
                     print(self.Qs)
