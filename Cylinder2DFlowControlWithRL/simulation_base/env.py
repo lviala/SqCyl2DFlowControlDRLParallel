@@ -34,8 +34,8 @@ def resume_env(plot=False,  # To plot results (Field, controls, lift, drag, rec 
 
     simulation_duration = 50.0 #duree en secondes de la simulation #50.0 default
     dt = 0.004
-    single_input = True
-    single_output = True
+    single_input = False
+    single_output = False
 
     root = 'mesh/turek_2d'  # Root of geometry file path
     if(not os.path.exists('mesh')):

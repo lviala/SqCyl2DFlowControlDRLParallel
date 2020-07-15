@@ -849,9 +849,7 @@ class Env2DCylinder(Environment):
             nbr_jets = 2
             action = np.zeros((nbr_jets, ))
         elif (self.output_params['single_output'] is True):
-            print(action)
             action = np.concatenate([action,-action])
-            print(action)
 
         if self.verbose > 2:
             print(action)
@@ -871,7 +869,6 @@ class Env2DCylinder(Environment):
                 # self.Qs += self.optimization_params["smooth_control"] * (np.array(action) - self.Qs)
                 # Linear interpolation in the control
                 self.Qs = np.array(self.previous_action) + (np.array(self.action) - np.array(self.previous_action)) * ((crrt_control_nbr + 1) / self.number_steps_execution)
-                print(self.Qs)
             else:
                 self.Qs = np.transpose(np.array(action))
 
@@ -879,7 +876,6 @@ class Env2DCylinder(Environment):
             if ("zero_net_Qs" in self.optimization_params) and (self.output_params['single_output'] is False):
                 if self.optimization_params["zero_net_Qs"]:
                     self.Qs = self.Qs - np.mean(self.Qs)
-                    print(self.Qs)
 
             # Evolve one numerical timestep forward
             self.u_, self.p_ = self.flow.evolve(self.Qs)
