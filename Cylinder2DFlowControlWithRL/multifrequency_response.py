@@ -40,7 +40,7 @@ def one_run(frequency=1, length = 10*t_vs, t_s = t_s):
     ANN_IO = []
 
     # Get information about ANN inputs
-    num_history_steps = len(agent.states_spec
+    num_history_steps = len(agent.states_spec)
 
     for k in range(int(length/t_s)):
         # Update current state
