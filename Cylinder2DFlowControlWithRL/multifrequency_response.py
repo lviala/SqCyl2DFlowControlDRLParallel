@@ -23,15 +23,15 @@ t_s = 1/2.92
 
 ### Controller harmonic forcing
 
-def one_run(frequency=1, length = 10*t_s, t_s = t_s):
+def one_run(frequency=1, length = 10*t_vs, t_s = t_s):
     
     omega = 2*np.pi*frequency
 
     internals = agent.initial_internals()
     ANN_IO = []
     
-    for k in range(length//t_s):
-        state = np.sin(omega*k*t_s)
+    for k in range(int(length/t_s)):
+        state = {'obs': np.array(np.sin(omega*k*t_s)).reshape((1,))}
         action, internals = agent.act(state, evaluation=True, internals=internals)
         ANN_IO.append([k*t_s,state['obs'][0],action[0]])
 
