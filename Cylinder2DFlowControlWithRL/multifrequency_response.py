@@ -17,9 +17,15 @@ if(not os.path.exists("frequency_response")):
 
 # Vortex shedding cycle
 t_vs = 6.860
-
 # Forcing sampling time
-t_s = 1/2.92
+t_s = 1.0/100.0
+
+### Analysis parameters ###
+
+length = 100
+start_freq = 1/length
+stop_freq = 10.0*(1/t_vs)
+num_freqs = 50
 
 ### Controller harmonic forcing
 
@@ -43,4 +49,13 @@ def one_run(frequency=1, length = 10*t_vs, t_s = t_s):
         spam_writer.writerow(["Time", "Input", "Output"])
         spam_writer.writerows(ANN_IO)
 
-one_run(frequency=0.5)
+
+print("Starting frequency response analysis: start-frequency = {:.3f} - stop-frequency = {:.3f}".format(start_freq,stop_freq))
+
+freqs = np.logspace(start=start_freq, stop=stop_freq, num=num_freqs)
+
+for freq in freqs:
+    print("frequency = {:.3f}".format(freq))
+    one_run(frequency=freq, length=length)
+
+print("Analysis complete - Exiting")
