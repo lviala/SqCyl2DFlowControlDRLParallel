@@ -2,6 +2,7 @@ import os
 import socket
 import numpy as np
 import csv
+from collections import deque
 
 from tensorforce.agents import Agent
 
@@ -19,6 +20,8 @@ if(not os.path.exists("frequency_response")):
 t_vs = 6.860
 # Forcing sampling time
 t_s = 1.0/100.0
+# Action time of controller
+t_a = 0.5
 
 ### Analysis parameters ###
 
@@ -35,9 +38,19 @@ def one_run(frequency=1, length = 10*t_vs, t_s = t_s):
 
     internals = agent.initial_internals()
     ANN_IO = []
-    
+
+    # Get information about ANN inputs
+    num_history_steps = len(agent.states())
+
     for k in range(int(length/t_s)):
+        # Update current state
         state = {'obs': np.array(np.sin(omega*k*t_s)).reshape((1,))}
+        # Update delayed states to mimic past_observations
+        for past_obs in range(num_history_steps-1):
+            key = "prev_obs_" + str(past_obs + 1)
+            t_prev = k*t_s - (past_obs + 1)*t_a
+            state.update({key : np.array(np.sin(omega*t_prev)).reshape((1,))})
+
         action, internals = agent.act(state, evaluation=True, internals=internals)
         ANN_IO.append([k*t_s,state['obs'][0],action[0]])
 
