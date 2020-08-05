@@ -52,7 +52,7 @@ def one_run(frequency=1, length = 10*t_vs, t_s = t_s):
 
 print("Starting frequency response analysis: start-frequency = {:.3f} - stop-frequency = {:.3f}".format(start_freq,stop_freq))
 
-freqs = np.logspace(start=start_freq, stop=stop_freq, num=num_freqs)
+freqs = np.logspace(start=np.log10(start_freq), stop=np.log10(stop_freq), num=num_freqs)
 
 for freq in freqs:
     print("frequency = {:.3f}".format(freq))
