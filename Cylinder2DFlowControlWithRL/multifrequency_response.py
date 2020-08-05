@@ -42,7 +42,7 @@ def one_run(frequency=1, length = 10*t_vs, t_s = t_s):
         ANN_IO.append([k*t_s,state['obs'][0],action[0]])
 
     # Output average values for the single run (Note that values for each timestep are already reported as we execute)
-    name = "IO_f_" + "{:.3f}".format(frequency).replace('.','p') + ".csv"
+    name = "IO_f_" + "{:.5f}".format(frequency).replace('.','p') + ".csv"
     
     with open("frequency_response/"+name, "w") as csv_file:
         spam_writer=csv.writer(csv_file, delimiter=";", lineterminator="\n")
