@@ -29,6 +29,7 @@ length = 100
 start_freq = 1/length
 stop_freq = 10.0*(1/t_vs)
 num_freqs = 50
+amplitude = 0.01
 
 ### Controller harmonic forcing
 
@@ -44,12 +45,12 @@ def one_run(frequency=1, length = 10*t_vs, t_s = t_s):
 
     for k in range(int(length/t_s)):
         # Update current state
-        state = {'obs': np.array(np.sin(omega*k*t_s)).reshape((1,))}
+        state = {'obs': np.array(amplitude*np.sin(omega*k*t_s)).reshape((1,))}
         # Update delayed states to mimic past_observations
         for past_obs in range(num_history_steps-1):
             key = "prev_obs_" + str(past_obs + 1)
             t_prev = k*t_s - (past_obs + 1)*t_a
-            state.update({key : np.array(np.sin(omega*t_prev)).reshape((1,))})
+            state.update({key : np.array(amplitude*np.sin(omega*t_prev)).reshape((1,))})
 
         action, internals = agent.act(state, evaluation=True, internals=internals)
         ANN_IO.append([k*t_s,state['obs'][0],action[0]])
