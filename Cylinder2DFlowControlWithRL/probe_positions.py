@@ -85,6 +85,24 @@ def probe_positions(probe_distribution, geometry_params):
                 for crrt_y in positions_probes_for_grid_y:
                     list_position_probes.append(np.array([crrt_x, crrt_y]))  # Append (x,y) pair array
 
+    elif (distribution_type == 'inflow8' or distribution_type == 'inflow64'):
+        
+        if distribution_type == 'inflow8':
+            # The 4 'columns' of 2 probes downstream of the cylinder
+            positions_probes_x_dist_from_right_side = [0.5, 1.0, 2.0, 4.0]
+            positions_probes_for_grid_x = [length_cylinder/2 + x for x in positions_probes_x_dist_from_right_side]
+            positions_probes_for_grid_y = [-0.5, 0.5]
+
+        if distribution_type == 'inflow64':
+            # The 8 'columns' of 8 probes downstream of the cylinder
+            positions_probes_x_dist_from_right_side = [0.25, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
+            positions_probes_for_grid_x = [length_cylinder/2 + x for x in positions_probes_x_dist_from_right_side]
+            positions_probes_for_grid_y = [-1.5, -1.0, -0.5, -0.25 , 0.25, 0.5, 1.0, 1.5]
+        
+        for crrt_x in positions_probes_for_grid_x:
+            for crrt_y in positions_probes_for_grid_y:
+                list_position_probes.append(np.array([crrt_x, crrt_y]))  # Append (x,y) pairs np array
+
     else:
 
         if probes_at_jets:
