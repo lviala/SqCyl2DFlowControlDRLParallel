@@ -1063,7 +1063,7 @@ class Env2DCylinder(Environment):
                 states.update({"act" : dict(type='float', shape=shape)})
 
                 for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
-                    states.update({"prev_act_"+ str(n_hist+1) : dict(type='float', shape=shape})
+                    states.update({"prev_act_"+ str(n_hist+1) : dict(type='float', shape=shape}))
 
 
             return states
