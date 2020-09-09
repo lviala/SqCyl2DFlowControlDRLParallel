@@ -169,8 +169,11 @@ class Env2DCylinder(Environment):
         self.history_parameters["drag"] = RingBuffer(self.size_history)
         self.history_parameters["lift"] = RingBuffer(self.size_history)
         self.history_parameters["recirc_area"] = RingBuffer(self.size_history)
-
+        
         self.history_observations = deque(maxlen = (self.optimization_params["num_steps_in_pressure_history"] -1))
+
+        if self.output_params["include_actions"]:
+            self.history_actions = deque(maxlen = (self.optimization_params["num_steps_in_pressure_history"] -1))
 
         # ------------------------------------------------------------------------
         # Remesh if necessary
@@ -345,9 +348,17 @@ class Env2DCylinder(Environment):
         if self.resetted_number_probes:
             print("Need to fill again the buffer; modified number of probes")
 
-            # Initialize observation history buffer if history observation history is included in state
+            # Initialize observation/action history buffer if history observation history is included in state
             for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
                 self.history_observations.appendleft(np.zeros(shape=len(self.output_params["locations"])))
+                
+                if self.output_params["include_actions"]:
+                    if (self.output_params['single_output'] == True):
+                        shape = (1,)
+                    else:
+                        shape = (2,)
+
+                    self.history_actions.appendleft(np.zeros(shape=shape))
 
             # TODO: Execute runs for 1 action step, so we would be running for (T/Nb)*size_history. While it should be just for size_history.  In practice, remesh if probes change
             for _ in range(self.size_history):
@@ -820,6 +831,20 @@ class Env2DCylinder(Environment):
                 
                 key = "prev_obs_" + str(n_hist + 1)
                 next_state.update({key : self.history_observations[n_hist]})
+
+        # Initialize action history buffer if action history is included in state
+        if self.output_params["include_actions"]:
+            if (self.output_params['single_output'] == True):
+                shape = (1,)
+            else:
+                shape = (2,)
+            
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+                self.history_actions.appendleft(np.zeros(shape=shape))
+
+                key = "prev_act_" + str(n_hist + 1)
+                next_state.update({key : self.history_actions[n_hist]})
+
             
         if self.verbose > 0:
             print(next_state["obs"])
@@ -920,6 +945,18 @@ class Env2DCylinder(Environment):
             for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
                 key = "prev_obs_" + str(n_hist + 1)
                 next_state.update({key : self.history_observations[n_hist]})
+
+        # Update action history buffer if action history is included in state
+        if self.output_params["include_actions"]:
+            next_state.update({'act' : self.history_actions[n_hist]})
+            
+            for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
+                key = "prev_act_" + str(n_hist + 1)
+                next_state.update({key : self.history_actions[n_hist]})
+            
+            # Append last action to action history buffer
+            self.history_actions.appendleft(actions)
+
 
         if self.verbose > 2:
             print(next_state["obs"])
