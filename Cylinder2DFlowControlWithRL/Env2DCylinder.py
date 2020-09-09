@@ -950,7 +950,7 @@ class Env2DCylinder(Environment):
 
         # Update action history buffer if action history is included in state
         if self.output_params["include_actions"]:
-            next_state.update({'act' : self.history_actions[n_hist]})
+            next_state.update({'act' : actions})
 
             for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
                 key = "prev_act_" + str(n_hist + 1)
