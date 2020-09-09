@@ -839,6 +839,8 @@ class Env2DCylinder(Environment):
             else:
                 shape = (2,)
             
+            next_state.update({'act' : np.zeros(shape=shape)})
+
             for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
                 self.history_actions.appendleft(np.zeros(shape=shape))
 
@@ -949,7 +951,7 @@ class Env2DCylinder(Environment):
         # Update action history buffer if action history is included in state
         if self.output_params["include_actions"]:
             next_state.update({'act' : self.history_actions[n_hist]})
-            
+
             for n_hist in range(self.optimization_params["num_steps_in_pressure_history"]-1):
                 key = "prev_act_" + str(n_hist + 1)
                 next_state.update({key : self.history_actions[n_hist]})
