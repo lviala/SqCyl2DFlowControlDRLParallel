@@ -1054,6 +1054,18 @@ class Env2DCylinder(Environment):
                 for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
                     states.update({"prev_obs_"+ str(n_hist+1) : dict(type='float', shape=(len(self.output_params["locations"]), ))})
 
+            if self.output_params["include_actions"]:
+                if (self.output_params['single_output'] == True):
+                    shape = (1,)
+                else:
+                    shape = (2,)
+
+                states.update({"act" : dict(type='float', shape=shape)})
+
+                for n_hist in range(self.optimization_params["num_steps_in_pressure_history"] - 1):
+                    states.update({"prev_act_"+ str(n_hist+1) : dict(type='float', shape=shape})
+
+
             return states
 
         elif self.output_params["probe_type"] == 'velocity':
